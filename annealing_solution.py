@@ -8,10 +8,11 @@ import networkx as nx
 import numpy as np
 import click
 import matplotlib
-from dimod import Binary, ConstrainedQuadraticModel, quicksum
+from dimod import Binary, ConstrainedQuadraticModel, quicksum, ExactCQMSolver
 from dwave.system import LeapHybridCQMSampler
 from task_system import TaskSystem, Task
 import itertools
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -57,10 +58,40 @@ def build_cqm(taskSystem: TaskSystem):
 
     return cqm
 
+def solve_cqm(cqm, sampler):
+    """
+    Solve the given cqm using the given sampler
+    :param cqm: the constrained quadratic model object
+    :param sampler: the sampler used to solve the problem
+    :return: sample_set: the set of feasible solutions to the problem
+                        or None if no feasible solution is found
+    """
+
+    # find the entire solution set
+    sample_set = sampler.sample_cqm(cqm, label='Partitioning solution')
+
+    # filter out the infeasible solutions, keeping only the feasible ones
+    feasible_sampleset = sample_set.filter(lambda row: row.is_feasible)
+
+    # if no feasible solution found, return None
+    if not len(feasible_sampleset):
+        print('No feasible solution found!!')
+        return None
+
+    return feasible_sampleset
+
 if __name__ == '__main__':
-    ts = TaskSystem([Task([1, 3, 6, 2], 7),
-                     Task([3, 5, 10, 4], 12),
-                     Task([2, 4, 6, 5], 6),
-                     Task([1, 1, 2, 1], 3),
-                     Task([3, 3, 4, 6], 10)])
+    # a test tasksystem
+    ts = TaskSystem([Task([6, 3,1], 7),
+                     Task([3, 5,7], 12),
+                     Task([2, 4,3], 6),
+                     ])
+
+    # build cqm problem from the tasksystem
     cqm = build_cqm(ts)
+
+    # sample using the exact cqm sampler for testing
+
+    sampler = ExactCQMSolver()
+    solutions = solve_cqm(cqm,sampler)
+    print(solutions)

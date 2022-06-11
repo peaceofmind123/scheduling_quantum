@@ -82,13 +82,16 @@ def solve_cqm(cqm, sampler):
 
 if __name__ == '__main__':
     # a test tasksystem
-    ts = TaskSystem([Task([6, 3,1], 7),
-                     Task([3, 5,7], 12),
-                     Task([2, 4,3], 6),
-                     ])
+    ts1 = TaskSystem([Task([6, 3,4], 7),
+                      Task([3, 5,6], 12),
+                      Task([2, 4,2], 6),
+                      Task([4, 10,11], 12),
+                      Task([3, 8,2], 10),
+                      Task([9, 14,12], 16),
+                      ])
 
     # build cqm problem from the tasksystem
-    cqm = build_cqm(ts)
+    cqm = build_cqm(ts1)
 
     # sample using the exact cqm sampler for testing
 

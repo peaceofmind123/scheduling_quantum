@@ -4,7 +4,6 @@ class Task:
         self.wcet_array = wcet_array
         self.deadline = deadline
 
-
 class TaskSystem:
     def __init__(self, tasks:[Task]):
         self.tasks = tasks

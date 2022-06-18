@@ -15,9 +15,29 @@ class JobQueue:
 
     def dequeue(self):
         return heapq.heappop(self.queue)
+    def top(self):
+        if len(self.queue) == 0:
+            return None
+
+        return self.queue[0]
 
     def __len__(self):
         return len(self.queue)
+
+    def update(self, current_time):
+        # need to recreate the priority queue
+        jobs = []
+        heapq.heapify(jobs)
+        for job in self.queue:
+            time_to_deadline = job.arrival_time + job.task.deadline - current_time
+            if time_to_deadline <= 0: # meaning that the deadline is missed
+                raise RuntimeError('A task has missed its deadline!!')
+
+            job.set_priority(time_to_deadline) # since we are using min heap, the priority is reversed
+
+            heapq.heappush(jobs, job)
+
+        self.queue = jobs
 
 class UniprocessorTask:
     def __init__(self, wcet:int, deadline:int):
@@ -50,8 +70,20 @@ class Job:
         self.execution_time = execution_time
         self.priority = 0
 
-    def set_priority(self, priority: int):
+    def set_priority(self, priority: float):
         self.priority = priority
+
+    def __lt__(self, other):
+        return self.priority < other.priority
+
+    def __gt__(self, other):
+        return self.priority > other.priority
+
+    def __le__(self, other):
+        return self.priority <= other.priority
+
+    def __ge__(self, other):
+        return self.priority >= other.priority
 
 class Running:
     def __init__(self):
@@ -112,12 +144,29 @@ class RTOS:
         # initialize the running job
         self.running = Running()
 
+
     def run_scheduler(self):
         """
         The core scheduler code
         :return:
         """
         print('scheduler to be run')
+        # update the job queue dynamically
+        self.job_queue.update(self.time_counter.current_time)
+
+        # check if running job's priority is higher (less, since we are using min-heaps) than the top of the queue
+        # but first, check if there is no running task (eg at initialization)
+        # or if there are no other tasks on the job queue at this moment
+        if self.running.running is None or len(self.job_queue) == 0:
+            return # do nothing
+
+        if self.running.running < self.job_queue.top():
+            # no need to preempt the running task
+            return
+
+        # this means that the running task should be prempted by the top of the queue
+        top = heapq.heapreplace(self.job_queue.queue,self.running.running)
+        self.set_running(top)
 
     def handle_running_job_expiry(self):
         self.run_scheduler()
@@ -177,4 +226,5 @@ class RTOS:
         pass
 
     def set_running(self, new_running):
-        pass
+        self.running.running = new_running
+

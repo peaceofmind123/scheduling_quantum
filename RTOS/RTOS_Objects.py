@@ -53,25 +53,29 @@ class UniprocessorTask:
         :return:
         """
         if current_time == self.next_arrival_time:
-            exec_time = math.floor(random.uniform(0,self.wcet))
+            exec_time = math.floor(random.uniform(1,self.wcet))
             self.emit_job(current_time, exec_time, self.next_arrival_time, job_queue)
             self.next_arrival_time = self.next_arrival_time + math.floor(random.exponential(EXP_SCALE)) + self.deadline
 
     def emit_job(self, current_time, exec_time, arrival_time, job_queue:JobQueue):
-        job = Job(self,self.next_job_number, arrival_time, exec_time)
+        job = Job(self,self.next_job_number, arrival_time, exec_time, current_time)
         self.next_job_number += 1
         job_queue.enqueue(job)
 
 class Job:
-    def __init__(self, task:UniprocessorTask, job_number, arrival_time, execution_time):
+    def __init__(self, task:UniprocessorTask, job_number, arrival_time, execution_time, current_time):
         self.task = task
         self.job_number = job_number
         self.arrival_time = arrival_time
         self.execution_time = execution_time
-        self.priority = 0
+        self.priority = self.arrival_time + self.task.deadline - current_time # set the initial priority when job is created
+
 
     def set_priority(self, priority: float):
         self.priority = priority
+
+    def update_priority_on_current_time(self, current_time):
+        self.priority = self.arrival_time + self.task.deadline - current_time
 
     def __lt__(self, other):
         return self.priority < other.priority
@@ -93,7 +97,7 @@ class Running:
         if self.running is None:
             return False # default value (since there is no running job, it cannot expire)
 
-        return self.running.arrival_time + self.running.execution_time >= current_time
+        return self.running.arrival_time + self.running.execution_time <= current_time
 
     def execute(self, current_time):
         print(f'Current Time: {current_time} Arrival Time: {self.running.arrival_time} '
@@ -154,19 +158,31 @@ class RTOS:
         # update the job queue dynamically
         self.job_queue.update(self.time_counter.current_time)
 
+        # also update the running job's priority
+        if self.running.running is not None:
+            self.running.running.update_priority_on_current_time(self.time_counter.current_time)
+
         # check if running job's priority is higher (less, since we are using min-heaps) than the top of the queue
-        # but first, check if there is no running task (eg at initialization)
         # or if there are no other tasks on the job queue at this moment
-        if self.running.running is None or len(self.job_queue) == 0:
+        if len(self.job_queue) == 0:
             return # do nothing
 
-        if self.running.running < self.job_queue.top():
+        if self.running.running is not None and self.running.running < self.job_queue.top():
             # no need to preempt the running task
             return
 
         # this means that the running task should be prempted by the top of the queue
-        top = heapq.heapreplace(self.job_queue.queue,self.running.running)
-        self.set_running(top)
+
+        if self.running.running is not None:
+            top = heapq.heapreplace(self.job_queue.queue,self.running.running)
+            self.set_running(top)
+
+        # if there is no running but job queue is empty, just pop the queue and place
+        # the top job as running
+        else:
+            top = heapq.heappop(self.job_queue.queue)
+            self.set_running(top)
+
 
     def handle_running_job_expiry(self):
         self.run_scheduler()
@@ -228,3 +244,10 @@ class RTOS:
     def set_running(self, new_running):
         self.running.running = new_running
 
+if __name__ == '__main__':
+    tasks = [UniprocessorTask(4,5),
+             UniprocessorTask(5,6),
+             UniprocessorTask(6,7)]
+
+    rtos = RTOS(tasks)
+    rtos.main_loop(10)

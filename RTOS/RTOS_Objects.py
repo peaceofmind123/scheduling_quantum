@@ -69,7 +69,7 @@ class Job:
         self.arrival_time = arrival_time
         self.execution_time = execution_time
         self.priority = self.arrival_time + self.task.deadline - current_time # set the initial priority when job is created
-
+        self.time_executed = 0 # the amount of time the job has run on the processor
 
     def set_priority(self, priority: float):
         self.priority = priority
@@ -97,11 +97,13 @@ class Running:
         if self.running is None:
             return False # default value (since there is no running job, it cannot expire)
 
-        return self.running.arrival_time + self.running.execution_time <= current_time
+        return self.running.time_executed == self.running.execution_time
 
     def execute(self, current_time):
         print(f'Current Time: {current_time} Arrival Time: {self.running.arrival_time} '
-              f'Execution Time: {self.running.execution_time}')
+              f'Execution Time: {self.running.execution_time}', f'Time executed: {self.running.time_executed}')
+        self.running.time_executed += 1
+
 
 class TimeCounter:
     def __init__(self):
@@ -185,6 +187,8 @@ class RTOS:
 
 
     def handle_running_job_expiry(self):
+        print("Running job has expired")
+        self.running.running = None # delete the running job cuz it has expired
         self.run_scheduler()
 
     def run_task_system_job_generation(self):
@@ -208,10 +212,17 @@ class RTOS:
 
     def run_cleanup(self):
         pass
+    def check_missed_deadlines(self):
+        for job in self.job_queue.queue:
+            if self.time_counter.current_time > job.arrival_time + job.task.deadline:
+                if job.time_executed != job.execution_time:
+                    raise RuntimeError('Deadline missed!!')
 
     def main_loop(self, num_iterations):
 
         for i in range(num_iterations):
+            # check if any job has missed its deadline
+            self.check_missed_deadlines()
             # check if running job has expired
             if self.check_running_job_expired(): #TODO: only do this on the scheduling instants
                 self.handle_running_job_expiry()

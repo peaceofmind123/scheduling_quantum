@@ -209,7 +209,8 @@ class RTOS:
     def handle_running_job_expiry(self):
         print("Running job has expired")
         self.running.running = None # delete the running job cuz it has expired
-        self.run_scheduler()
+        # don't run scheduler here, only run at the end of the main loop
+        # self.run_scheduler()
 
     def run_task_system_job_generation(self):
         self.task_system.emit_jobs(self.time_counter.current_time)
@@ -227,8 +228,8 @@ class RTOS:
         for i in range(len(self.task_system.temp_job_queue)):
             self.job_queue.enqueue(self.task_system.temp_job_queue.dequeue())
 
-        # then, run the scheduler
-        self.run_scheduler()
+        # don't run scheduler here, delegated to the main loop itself
+        #self.run_scheduler()
 
     def run_cleanup(self):
         pass
@@ -244,7 +245,11 @@ class RTOS:
             # check if any job has missed its deadline # not necessary, shifted to initialization portion
             # self.check_missed_deadlines()
             # check if running job has expired
-            if self.check_running_job_expired(): #TODO: only do this on the scheduling instants
+            has_running_job_expired = False
+            have_new_jobs_arrived = False
+
+            if self.check_running_job_expired():
+                has_running_job_expired = True
                 self.handle_running_job_expiry()
 
             # run the tasks' job arrival mechanism
@@ -252,7 +257,12 @@ class RTOS:
 
             # check if new jobs have arrived
             if self.check_new_job_arrival():
+                have_new_jobs_arrived = True
                 self.handle_new_job_arrival()
+
+            # run the scheduler if necessary
+            if has_running_job_expired or have_new_jobs_arrived:
+                self.run_scheduler()
 
             # run the running job for one step
             self.running.execute(self.time_counter.current_time)

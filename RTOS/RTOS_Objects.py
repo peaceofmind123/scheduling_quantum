@@ -29,12 +29,7 @@ class JobQueue:
         jobs = []
         heapq.heapify(jobs)
         for job in self.queue:
-            time_to_deadline = job.arrival_time + job.task.deadline - current_time
-            if time_to_deadline <= 0: # meaning that the deadline is missed
-                raise RuntimeError('A task has missed its deadline!!')
-
-            job.set_priority(time_to_deadline) # since we are using min heap, the priority is reversed
-
+            job.update_priority_on_current_time(current_time)
             heapq.heappush(jobs, job)
 
         self.queue = jobs
@@ -50,6 +45,7 @@ class UniprocessorTask:
         """
         One step of task operation
         :param current_time: the current global logical time
+        :param job_queue: the job queue to enqueue potentially arriving job
         :return:
         """
         if current_time == self.next_arrival_time:
@@ -75,6 +71,14 @@ class Job:
         self.priority = priority
 
     def update_priority_on_current_time(self, current_time):
+        """
+        Dynamically update the EDF priority based on the current time
+        Should only be called on scheduling instants, not at each time instant
+        :param current_time: The current logical time
+        :return:
+        """
+        # CAUTION: the priority is for a min-heap only
+        # i.e. smaller value means higher priority
         self.priority = self.arrival_time + self.task.deadline - current_time
 
     def __lt__(self, other):
@@ -173,10 +177,10 @@ class RTOS:
 
     def run_scheduler(self):
         """
-        The core scheduler code
+        The EDF scheduler
         :return:
         """
-        print('scheduler to be run')
+        print('scheduler running')
         # update the job queue dynamically
         self.job_queue.update(self.time_counter.current_time)
 
@@ -256,6 +260,9 @@ class RTOS:
             self.run_task_system_job_generation()
 
             # check if new jobs have arrived
+            # TODO: some refactoring to be done, the checking for new job arrival and
+            # handling new job arrival could be inbuilt into the task system
+            # job generation mechanism
             if self.check_new_job_arrival():
                 have_new_jobs_arrived = True
                 self.handle_new_job_arrival()

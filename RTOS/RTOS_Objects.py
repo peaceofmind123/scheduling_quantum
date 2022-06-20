@@ -110,7 +110,6 @@ class TimeCounter:
         """
         Counts logical time steps
         """
-        self.start_time = 0
         self.current_time = 0
 
     def increment_time(self):
@@ -119,8 +118,24 @@ class TimeCounter:
 class UniprocessorTaskSystem:
     def __init__(self, tasks):
         self.tasks: [UniprocessorTask] = tasks
+        # test for feasibility of scheduling
+        self.uniprocessor_schedulability_test()
         # a temporary job queue to hold jobs that have arrived at the current instant of time only
         self.temp_job_queue = JobQueue()
+
+    def uniprocessor_schedulability_test(self):
+        if len(self.tasks) == 0:
+            return
+        total_utilization = 0.0 # the total system utilization
+
+        for task in self.tasks:
+            try:
+                total_utilization += task.wcet / task.deadline
+            except ZeroDivisionError as e:
+                raise ValueError('Invalid deadline parameter on task') # cast to valueError for uniform interface
+
+        if total_utilization > 1.0:
+            raise ValueError('The task system is infeasible upon the platform!')
 
     def emit_jobs(self, current_time):
         """
@@ -139,7 +154,11 @@ class RTOS:
 
     def __init__(self, tasks:[UniprocessorTask]):
         # initialize the task system
-        self.task_system = UniprocessorTaskSystem(tasks)
+        try:
+            self.task_system = UniprocessorTaskSystem(tasks)
+        except ValueError as e:
+            # this means that the task system was unschedulable
+            raise e
 
         # initialize the time counter, which acts as a global logical clock
         self.time_counter = TimeCounter()
@@ -149,6 +168,7 @@ class RTOS:
 
         # initialize the running job
         self.running = Running()
+
 
 
     def run_scheduler(self):
@@ -221,8 +241,8 @@ class RTOS:
     def main_loop(self, num_iterations):
 
         for i in range(num_iterations):
-            # check if any job has missed its deadline
-            self.check_missed_deadlines()
+            # check if any job has missed its deadline # not necessary, shifted to initialization portion
+            # self.check_missed_deadlines()
             # check if running job has expired
             if self.check_running_job_expired(): #TODO: only do this on the scheduling instants
                 self.handle_running_job_expiry()
@@ -256,9 +276,13 @@ class RTOS:
         self.running.running = new_running
 
 if __name__ == '__main__':
-    tasks = [UniprocessorTask(4,5),
-             UniprocessorTask(5,6),
-             UniprocessorTask(6,7)]
+    tasks = [UniprocessorTask(4,10),
+             UniprocessorTask(5,26),
+             UniprocessorTask(6,17)]
 
-    rtos = RTOS(tasks)
-    rtos.main_loop(10)
+    try:
+        rtos = RTOS(tasks)
+        rtos.main_loop(10)
+    except ValueError as e: # means that the task system given is unschedulable
+        print(e)
+

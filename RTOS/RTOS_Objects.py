@@ -40,6 +40,7 @@ class UniprocessorTask:
         self.deadline = deadline
         self.next_arrival_time = 0 # arrival time of next job (initially that of the first job)
         self.next_job_number = 0
+        self.task_number = None
 
     def operation_step(self, current_time, job_queue: JobQueue):
         """
@@ -104,7 +105,11 @@ class Running:
         return self.running.time_executed == self.running.execution_time
 
     def execute(self, current_time):
-        print(f'Current Time: {current_time} Arrival Time: {self.running.arrival_time} '
+        if self.running is None:
+            print('IDLE')
+            return
+
+        print(f'Task Number: {self.running.task.task_number} Current Time: {current_time} Arrival Time: {self.running.arrival_time} '
               f'Execution Time: {self.running.execution_time}', f'Time executed: {self.running.time_executed}')
         self.running.time_executed += 1
 
@@ -122,6 +127,10 @@ class TimeCounter:
 class UniprocessorTaskSystem:
     def __init__(self, tasks):
         self.tasks: [UniprocessorTask] = tasks
+        # assign the tasks their task number
+        for i, task in enumerate(self.tasks):
+            task.task_number = i+1  # starting from 1
+
         # test for feasibility of scheduling
         self.uniprocessor_schedulability_test()
         # a temporary job queue to hold jobs that have arrived at the current instant of time only
@@ -188,22 +197,22 @@ class RTOS:
         if self.running.running is not None:
             self.running.running.update_priority_on_current_time(self.time_counter.current_time)
 
-        # check if running job's priority is higher (less, since we are using min-heaps) than the top of the queue
-        # or if there are no other tasks on the job queue at this moment
+        # check if there are no tasks on the job queue at this moment
         if len(self.job_queue) == 0:
-            return # do nothing
+            return  # no point in running the scheduler if the job queue is empty
 
-        if self.running.running is not None and self.running.running < self.job_queue.top():
-            # no need to preempt the running task
+        # check if running job's priority is higher (less, since we are using min-heaps) than the top of the queue
+        if self.running.running is not None and self.running.running <= self.job_queue.top():
+            # no need to preempt the running task if it has a higher priority
             return
 
-        # this means that the running task should be prempted by the top of the queue
-
+        # now, the running task should be prempted by the top of the queue
         if self.running.running is not None:
+            # note that heapreplace first pops the top and then pushes running
             top = heapq.heapreplace(self.job_queue.queue,self.running.running)
             self.set_running(top)
 
-        # if there is no running but job queue is empty, just pop the queue and place
+        # if there is no running and job queue is not empty, just pop the queue and place
         # the top job as running
         else:
             top = heapq.heappop(self.job_queue.queue)

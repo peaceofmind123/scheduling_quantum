@@ -38,8 +38,8 @@ class UniprocessorTask:
     def __init__(self, wcet:int, deadline:int):
         self.wcet = wcet
         self.deadline = deadline
-        self.next_arrival_time = 0 # arrival time of next job (initially that of the first job)
-        self.next_job_number = 0
+        self.next_arrival_time = 0  # arrival time of next job (initially that of the first job)
+        self.next_job_number = 1  # job number starting from 1
         self.task_number = None
 
     def operation_step(self, current_time, job_queue: JobQueue):
@@ -108,10 +108,10 @@ class Running:
         if self.running is None:
             print('IDLE')
             return
-
-        print(f'Task Number: {self.running.task.task_number} Current Time: {current_time} Arrival Time: {self.running.arrival_time} '
-              f'Execution Time: {self.running.execution_time}', f'Time executed: {self.running.time_executed}')
         self.running.time_executed += 1
+        print(f'Task Number: {self.running.task.task_number} Job Number: {self.running.job_number} '
+              f'Current Time: {current_time+1} Time executed: {self.running.time_executed} Execution Time Left: {self.running.execution_time - self.running.time_executed}'
+              )
 
 
 class TimeCounter:
@@ -145,7 +145,7 @@ class UniprocessorTaskSystem:
             try:
                 total_utilization += task.wcet / task.deadline
             except ZeroDivisionError as e:
-                raise ValueError('Invalid deadline parameter on task') # cast to valueError for uniform interface
+                raise ValueError(f'Invalid deadline parameter on task #{task.task_number}') # cast to valueError for uniform interface
 
         if total_utilization > 1.0:
             raise ValueError('The task system is infeasible upon the platform!')
@@ -236,6 +236,7 @@ class RTOS:
         Assumes that new jobs have arrived into the temporary job queue of the UniprocessorTaskSystem
         :return:
         """
+        print('New job(s) have arrived')
         # enqueue the new jobs into the job queue
         # note that this automatically performs the cleanup of the task system's temp queue
         for i in range(len(self.task_system.temp_job_queue)):
@@ -308,7 +309,7 @@ if __name__ == '__main__':
 
     try:
         rtos = RTOS(tasks)
-        rtos.main_loop(10)
+        rtos.main_loop(100)
     except ValueError as e: # means that the task system given is unschedulable
         print(e)
 

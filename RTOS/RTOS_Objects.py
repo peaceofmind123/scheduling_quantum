@@ -6,6 +6,7 @@ from numpy import random
 import pandas as pd
 import plotly.express as px
 
+
 import matplotlib.pyplot as plt
 
 EXP_SCALE = 2.0
@@ -376,12 +377,32 @@ class RTOS:
 
         # Declaring a bar in schedule
         #gnt.broken_barh([(40, 50)], (30, 9), facecolors=('tab:orange'))
-        colors_array = ['tab:red', 'tab:blue', 'tab:green']
         # Declaring multiple bars in at same level and same width
-        gnt.broken_barh([(event[2], event[3]) for event in self.logger.events], (3, 5),
-                        facecolors=colors_array)
+        # event[2] is the arrival time of job on the processor
+        # event[3] is the session duration for the job
+        # the (3,5) tuple indicates that the bottom of the bar starts at 3 and has
+        # a height of 5
+        colors = []
+        tasks_encountered = []
+        color_map = {}
+        for event in self.logger.events:
+            if event[0] not in tasks_encountered:
+                r,g,b = random.randint(0,255,3)
+                color = '#%02x%02x%02x' % (r, g, b) # map rgb to hex
+                color_map[f'{event[0]}'] = color
+                colors.append(color)
+                tasks_encountered.append(event[0])
+            else:
+                colors.append(color_map[f'{event[0]}'])
 
-        [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 5)) for event in self.logger.events]
+
+        gnt.broken_barh([(event[2], event[3]) for event in self.logger.events], (3, 5),
+                       facecolors=colors )
+
+        # event[0] is the task_number
+        # event[1] is the job_number
+        # the 8 = 3 + 5 indicates the y position of the top of the bar
+        [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 8.5)) for event in self.logger.events]
 
         #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9),
         #                facecolors=('tab:red'))
@@ -396,7 +417,7 @@ if __name__ == '__main__':
 
     try:
         rtos = RTOS(tasks)
-        rtos.main_loop(15)
+        rtos.main_loop(100)
         rtos.generate_schedule_chart()
     except ValueError as e: # means that the task system given is unschedulable
         print(e)

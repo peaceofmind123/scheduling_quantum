@@ -3,6 +3,10 @@ import time
 import math
 from threading import Thread, Lock
 from numpy import random
+import pandas as pd
+import plotly.express as px
+
+import matplotlib.pyplot as plt
 
 EXP_SCALE = 2.0
 class JobQueue:
@@ -162,6 +166,13 @@ class UniprocessorTaskSystem:
     def check_new_job_arrival(self):
         return len(self.temp_job_queue) > 0
 
+class Logger:
+    def __init__(self):
+        pass
+
+class Grapher:
+    def __init__(self):
+        pass
 
 class RTOS:
 
@@ -182,6 +193,11 @@ class RTOS:
         # initialize the running job
         self.running = Running()
 
+        # initialize the logger
+        self.logger = Logger()
+
+        # initialize the grapher
+        self.grapher = Grapher()
 
 
     def run_scheduler(self):
@@ -290,17 +306,51 @@ class RTOS:
             # progress the clock by 1 logical unit
             self.time_counter.increment_time()
 
-
     def check_running_job_expired(self):
         return self.running.has_expired(self.time_counter.current_time)
-    def set_running_job_expired(self, value):
-        pass
-
-    def set_new_job_arrived(self, value):
-        pass
 
     def set_running(self, new_running):
         self.running.running = new_running
+
+    def generate_schedule_chart(self):
+        """
+        Generate the schedule chart
+        :return:
+        """
+
+        # Declaring a figure "gnt"
+        fig, gnt = plt.subplots()
+
+        # Setting Y-axis limits
+        gnt.set_ylim(0, 10)
+
+        # Setting X-axis limits
+        gnt.set_xlim(0, 160)
+
+        # Setting labels for x-axis and y-axis
+        gnt.set_xlabel('seconds since start')
+        gnt.set_ylabel('Processor')
+
+        # Setting ticks on y-axis
+        gnt.set_yticks([3])
+        # Labelling tickes of y-axis
+        gnt.set_yticklabels(['1'])
+
+        # Setting graph attribute
+        gnt.grid(True)
+
+        # Declaring a bar in schedule
+        #gnt.broken_barh([(40, 50)], (30, 9), facecolors=('tab:orange'))
+
+        # Declaring multiple bars in at same level and same width
+        gnt.broken_barh([(110, 10), (150, 10)], (3, 5),
+                        facecolors='tab:blue')
+
+        #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9),
+        #                facecolors=('tab:red'))
+        plt.show()
+        plt.savefig("gantt1.png")
+
 
 if __name__ == '__main__':
     tasks = [UniprocessorTask(4,10),
@@ -310,6 +360,7 @@ if __name__ == '__main__':
     try:
         rtos = RTOS(tasks)
         rtos.main_loop(100)
+        rtos.generate_schedule_chart()
     except ValueError as e: # means that the task system given is unschedulable
         print(e)
 

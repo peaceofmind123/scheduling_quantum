@@ -127,14 +127,15 @@ class Running:
 
         :return:
         """
-        return self.arrival_time_on_processor, self.session_duration
 
-    def set_running(self, job:Job, current_time, logger):
+        return self.running.task.task_number, self.running.job_number, self.arrival_time_on_processor, self.session_duration
+
+    def set_log(self, logger):
         event = self.get_event()
-
-        # the if clause required to skip the initial null event
-        if event[0] is not None and event[1] is not None:
+        if event is not None:
             logger.add_event(self.get_event())
+
+    def set_running(self, job:Job, current_time):
         self.running = job
         self.arrival_time_on_processor = current_time
         self.session_duration = 0
@@ -190,7 +191,7 @@ class UniprocessorTaskSystem:
 
 class Logger:
     def __init__(self):
-        self.events = [] # the array of events: it consists of tuples of form (arrival_time, time_executed)
+        self.events = [] # the array of events: it consists of tuples of form (task_id, job_id, arrival_time_on_processor, session_duration)
 
     def add_event(self, event):
         self.events.append(event)
@@ -252,6 +253,8 @@ class RTOS:
         # now, the running task should be prempted by the top of the queue
         if self.running.running is not None:
             # note that heapreplace first pops the top and then pushes running
+            #set the log since the running job is being replaced
+            self.running.set_log(self.logger)
             top = heapq.heapreplace(self.job_queue.queue,self.running.running)
             self.set_running(top)
 
@@ -264,6 +267,7 @@ class RTOS:
 
     def handle_running_job_expiry(self):
         print("Running job has expired")
+        self.running.set_log(self.logger) # set the log at expiry time
         self.running.running = None # delete the running job cuz it has expired
         # don't run scheduler here, only run at the end of the main loop
         # self.run_scheduler()
@@ -341,7 +345,7 @@ class RTOS:
         return self.running.has_expired(self.time_counter.current_time)
 
     def set_running(self, new_running):
-        self.running.set_running(new_running, self.time_counter.current_time, self.logger)
+        self.running.set_running(new_running, self.time_counter.current_time)
 
     def generate_schedule_chart(self):
         """
@@ -372,10 +376,12 @@ class RTOS:
 
         # Declaring a bar in schedule
         #gnt.broken_barh([(40, 50)], (30, 9), facecolors=('tab:orange'))
-
+        colors_array = ['tab:red', 'tab:blue', 'tab:green']
         # Declaring multiple bars in at same level and same width
-        gnt.broken_barh(self.logger.events, (3, 5),
-                        facecolors='tab:blue')
+        gnt.broken_barh([(event[2], event[3]) for event in self.logger.events], (3, 5),
+                        facecolors=colors_array)
+
+        [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 5)) for event in self.logger.events]
 
         #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9),
         #                facecolors=('tab:red'))
@@ -390,7 +396,7 @@ if __name__ == '__main__':
 
     try:
         rtos = RTOS(tasks)
-        rtos.main_loop(100)
+        rtos.main_loop(15)
         rtos.generate_schedule_chart()
     except ValueError as e: # means that the task system given is unschedulable
         print(e)

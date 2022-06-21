@@ -101,6 +101,8 @@ class Job:
 class Running:
     def __init__(self):
         self.running = None # the running job:Job instance
+        self.arrival_time_on_processor = None # the time that the current running job arrived on the processor
+        self.session_duration = None  # the duration that the current job has been executing, without preemption on the processor
 
     def has_expired(self, current_time):
         if self.running is None:
@@ -113,9 +115,29 @@ class Running:
             print('IDLE')
             return
         self.running.time_executed += 1
+        self.session_duration += 1  # log the current session duration
         print(f'Task Number: {self.running.task.task_number} Job Number: {self.running.job_number} '
               f'Current Time: {current_time+1} Time executed: {self.running.time_executed} Execution Time Left: {self.running.execution_time - self.running.time_executed}'
               )
+
+    def get_event(self):
+        """
+        Get the event tuple at the current time
+        The event tuple records (arrival_time_on_processor, session_duration)
+
+        :return:
+        """
+        return self.arrival_time_on_processor, self.session_duration
+
+    def set_running(self, job:Job, current_time, logger):
+        event = self.get_event()
+
+        # the if clause required to skip the initial null event
+        if event[0] is not None and event[1] is not None:
+            logger.add_event(self.get_event())
+        self.running = job
+        self.arrival_time_on_processor = current_time
+        self.session_duration = 0
 
 
 class TimeCounter:
@@ -168,7 +190,10 @@ class UniprocessorTaskSystem:
 
 class Logger:
     def __init__(self):
-        pass
+        self.events = [] # the array of events: it consists of tuples of form (arrival_time, time_executed)
+
+    def add_event(self, event):
+        self.events.append(event)
 
 class Grapher:
     def __init__(self):
@@ -184,6 +209,8 @@ class RTOS:
             # this means that the task system was unschedulable
             raise e
 
+        # set the number of iterations (time steps)
+        self.max_iterations = 0 # 0 by default, set again by main loop
         # initialize the time counter, which acts as a global logical clock
         self.time_counter = TimeCounter()
 
@@ -263,6 +290,7 @@ class RTOS:
 
     def run_cleanup(self):
         pass
+
     def check_missed_deadlines(self):
         for job in self.job_queue.queue:
             if self.time_counter.current_time > job.arrival_time + job.task.deadline:
@@ -270,6 +298,9 @@ class RTOS:
                     raise RuntimeError('Deadline missed!!')
 
     def main_loop(self, num_iterations):
+
+        # set the max number of iterations
+        self.max_iterations = num_iterations
 
         for i in range(num_iterations):
             # check if any job has missed its deadline # not necessary, shifted to initialization portion
@@ -310,7 +341,7 @@ class RTOS:
         return self.running.has_expired(self.time_counter.current_time)
 
     def set_running(self, new_running):
-        self.running.running = new_running
+        self.running.set_running(new_running, self.time_counter.current_time, self.logger)
 
     def generate_schedule_chart(self):
         """
@@ -325,10 +356,10 @@ class RTOS:
         gnt.set_ylim(0, 10)
 
         # Setting X-axis limits
-        gnt.set_xlim(0, 160)
+        gnt.set_xlim(0, self.max_iterations)
 
         # Setting labels for x-axis and y-axis
-        gnt.set_xlabel('seconds since start')
+        gnt.set_xlabel('Logical Time')
         gnt.set_ylabel('Processor')
 
         # Setting ticks on y-axis
@@ -343,7 +374,7 @@ class RTOS:
         #gnt.broken_barh([(40, 50)], (30, 9), facecolors=('tab:orange'))
 
         # Declaring multiple bars in at same level and same width
-        gnt.broken_barh([(110, 10), (150, 10)], (3, 5),
+        gnt.broken_barh(self.logger.events, (3, 5),
                         facecolors='tab:blue')
 
         #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9),

@@ -5,7 +5,7 @@ from threading import Thread, Lock
 from numpy import random
 import pandas as pd
 import plotly.express as px
-
+import matplotlib.patches as mpatches
 
 import matplotlib.pyplot as plt
 
@@ -358,7 +358,7 @@ class RTOS:
         fig, gnt = plt.subplots()
 
         # Setting Y-axis limits
-        gnt.set_ylim(3, 10)
+        gnt.set_ylim(3, 13)
 
         # Setting X-axis limits
         gnt.set_xlim(0, self.max_iterations)
@@ -395,14 +395,19 @@ class RTOS:
             else:
                 colors.append(color_map[f'{event[0]}'])
 
-
         gnt.broken_barh([(event[2], event[3]) for event in self.logger.events], (3, 5),
                        facecolors=colors )
+
+        # generate the legend for the tasks
+        # the key in color map is the task number
+        legend_patches = [mpatches.Patch(color=color_map[key], label=f'Task {key}') for key in color_map]
+        plt.legend(handles=legend_patches, bbox_to_anchor=(1.01,3))
 
         # event[0] is the task_number
         # event[1] is the job_number
         # the 8 = 3 + 5 indicates the y position of the top of the bar
-        [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 8.5)) for event in self.logger.events]
+        y_stagger = [2.2 if i % 2 == 0 else 0 for i in range(len(self.logger.events))]
+        [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 8.5 + y_stagger[i])) for i, event in enumerate(self.logger.events)]
 
         # set aspect ratio
         ratio = 0.1

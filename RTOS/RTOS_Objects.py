@@ -358,7 +358,7 @@ class RTOS:
         fig, gnt = plt.subplots()
 
         # Setting Y-axis limits
-        gnt.set_ylim(0, 10)
+        gnt.set_ylim(3, 10)
 
         # Setting X-axis limits
         gnt.set_xlim(0, self.max_iterations)
@@ -404,10 +404,14 @@ class RTOS:
         # the 8 = 3 + 5 indicates the y position of the top of the bar
         [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 8.5)) for event in self.logger.events]
 
-        #gnt.broken_barh([(10, 50), (100, 20), (130, 10)], (20, 9),
-        #                facecolors=('tab:red'))
+        # set aspect ratio
+        ratio = 0.1
+        x_left, x_right = gnt.get_xlim()
+        y_low, y_high = gnt.get_ylim()
+        gnt.set_aspect(abs((x_right - x_left) / (y_low - y_high)) * ratio)
+        plt.savefig("gantt1.png", dpi=300)
+
         plt.show()
-        plt.savefig("gantt1.png")
 
 
 if __name__ == '__main__':

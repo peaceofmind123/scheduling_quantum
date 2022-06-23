@@ -401,20 +401,20 @@ class RTOS:
         # generate the legend for the tasks
         # the key in color map is the task number
         legend_patches = [mpatches.Patch(color=color_map[key], label=f'Task {key}') for key in color_map]
-        plt.legend(handles=legend_patches, bbox_to_anchor=(1.01,3))
+        plt.legend(handles=legend_patches, bbox_to_anchor=(1.01,-0.28))
 
         # event[0] is the task_number
         # event[1] is the job_number
         # the 8 = 3 + 5 indicates the y position of the top of the bar
         y_stagger = [2.2 if i % 2 == 0 else 0 for i in range(len(self.logger.events))]
-        [gnt.annotate(f'{event[0]}{event[1]}', (event[2], 8.5 + y_stagger[i])) for i, event in enumerate(self.logger.events)]
+        [gnt.annotate(f'{event[1]}', (event[2], 8.5 + y_stagger[i])) for i, event in enumerate(self.logger.events)]
 
         # set aspect ratio
         ratio = 0.1
         x_left, x_right = gnt.get_xlim()
         y_low, y_high = gnt.get_ylim()
         gnt.set_aspect(abs((x_right - x_left) / (y_low - y_high)) * ratio)
-        plt.savefig("gantt1.png", dpi=300)
+        plt.savefig("gantt1.png", dpi=300, bbox_inches='tight')
 
         plt.show()
 
@@ -424,8 +424,20 @@ if __name__ == '__main__':
              UniprocessorTask(5,26),
              UniprocessorTask(6,17)]
 
+
+    tasks2 = [UniprocessorTask(2,10),
+             UniprocessorTask(3,26),
+             UniprocessorTask(2,99),
+             UniprocessorTask(4,60),
+             UniprocessorTask(7,45),
+             UniprocessorTask(3, 100),
+              UniprocessorTask(4, 50),
+              UniprocessorTask(4, 65),
+              UniprocessorTask(6, 80),
+              UniprocessorTask(3, 92),
+              ]
     try:
-        rtos = RTOS(tasks)
+        rtos = RTOS(tasks2)
         rtos.main_loop(100)
         rtos.generate_schedule_chart()
     except ValueError as e: # means that the task system given is unschedulable

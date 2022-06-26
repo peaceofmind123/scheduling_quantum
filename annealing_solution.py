@@ -67,8 +67,8 @@ def solve_cqm(cqm, sampler):
                         or None if no feasible solution is found
     """
 
-    # find the entire solution set
-    sample_set = sampler.sample_cqm(cqm, label='Partitioning solution')
+    # find the entire solution set (with a time limit of 10 seconds to find the solution)
+    sample_set = sampler.sample_cqm(cqm, time_limit=10, label='Partitioning solution')
 
     # filter out the infeasible solutions, keeping only the feasible ones
     feasible_sampleset = sample_set.filter(lambda row: row.is_feasible)
@@ -77,24 +77,27 @@ def solve_cqm(cqm, sampler):
     if not len(feasible_sampleset):
         print('No feasible solution found!!')
         return None
-
+    
     return feasible_sampleset
 
 if __name__ == '__main__':
     # a test tasksystem
-    ts1 = TaskSystem([Task([6, 3,4], 7),
-                      Task([3, 5,6], 12),
-                      Task([2, 4,2], 6),
-                      Task([4, 10,11], 12),
-                      Task([3, 8,2], 10),
-                      Task([9, 14,12], 16),
+    ts1 = TaskSystem([Task([5, 10, 1], 17),
+                      Task([2, 1, 3], 32),
+                      Task([2, 3, 3], 36),
+                      Task([2, 8, 3], 10),
+                      Task([1, 6, 3], 26),
+                      Task([2, 3, 3], 56),
+                      Task([2, 8, 3], 100),
+                      Task([1, 6, 3], 96),
+
                       ])
 
     # build cqm problem from the tasksystem
     cqm = build_cqm(ts1)
 
-    # sample using the exact cqm sampler for testing
+    # sample using the leap hybrid cqm sampler
 
-    sampler = ExactCQMSolver()
-    solutions = solve_cqm(cqm,sampler)
+    sampler = LeapHybridCQMSampler()
+    solutions = solve_cqm(cqm, sampler)
     print(solutions)

@@ -49,11 +49,13 @@ class TaskSystemGenerator:
         ts = TaskSystem(tasks)
         return ts
 
-    def generate_dataset(self, num_tasksystems:int, save_path:str):
+    def generate_dataset(self, num_tasksystems:int, save_path:str, save:bool = True):
         """Generate a set of task systems with the given parameters"""
+
         task_systems = [self.canonical_generate_tasks() for i in range(num_tasksystems)]
-        with open(save_path, 'wb') as f:
-            pickle.dump(task_systems, f)
+        if save:
+            with open(save_path, 'wb') as f:
+                pickle.dump(task_systems, f)
 
         return task_systems
 

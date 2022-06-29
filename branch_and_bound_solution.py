@@ -1,6 +1,7 @@
 from ortools.linear_solver import pywraplp
 from task_system import TaskSystem, Task
 import numpy as np
+from RTOS.RTOS_Objects import UniprocessorTask
 
 class BranchBoundSolver:
     def __init__(self, task_system:TaskSystem, solver_backend:str='SCIP'):
@@ -49,20 +50,48 @@ class BranchBoundSolver:
         # save the decision variables
         self.x = x
 
-    def solve(self):
+    def solve(self, display_output:bool = True):
         status = self.solver.Solve()
         if status == pywraplp.Solver.OPTIMAL:
-            print('Objective value =', self.solver.Objective().Value())
+            if display_output:
+                print('Objective value =', self.solver.Objective().Value())
             for i in range(self.task_system.num_tasks):
                 for j in range(self.task_system.num_processors):
-                    print(self.x[i][j].name(), ' = ', self.x[i][j].solution_value())
-            print()
-            print('Problem solved in %f milliseconds' % self.solver.wall_time())
-            print('Problem solved in %d iterations' % self.solver.iterations())
-            print('Problem solved in %d branch-and-bound nodes' % self.solver.nodes())
+                    if display_output:
+                        print(self.x[i][j].name(), ' = ', self.x[i][j].solution_value())
+            if display_output:
+                print()
+                print('Problem solved in %f milliseconds' % self.solver.wall_time())
+                print('Problem solved in %d iterations' % self.solver.iterations())
+                print('Problem solved in %d branch-and-bound nodes' % self.solver.nodes())
+
+            # return the values
+            return self.x, self.solver.Objective().Value()
         else:
             print('The problem does not have an optimal solution.')
 
+    def get_partitioning_from_solution(self):
+        """To be called after solve is called"""
+        x = self.x
+        num_tasks = len(x)
+        num_processors = len(x[0])
+        # fill this array with arrays of uniprocessor tasks for the corresponding processor
+        partitions = [[] for j in range(num_processors)]
+        for i in range(num_tasks):  # iterate through tasks
+
+            # get the task and its deadline
+            task = self.task_system.tasks[i]
+            deadline = task.deadline
+
+            for j in range(num_processors):  # iterate through processors
+
+                # get the wcet
+                wcet = task.wcet_array[j]
+
+                # partition
+                if x[i][j].solution_value() == 1:  # means that task i has been assigned to processor j
+                    partitions[j].append(UniprocessorTask(wcet,deadline))
+        return partitions
 
 def main():
     # Create the mip solver with the SCIP backend.

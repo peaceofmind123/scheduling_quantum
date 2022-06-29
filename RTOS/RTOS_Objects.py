@@ -40,12 +40,13 @@ class JobQueue:
         self.queue = jobs
 
 class UniprocessorTask:
-    def __init__(self, wcet:int, deadline:int):
+    def __init__(self, wcet:int, deadline:int, external_task_number=None):
         self.wcet = wcet
         self.deadline = deadline
         self.next_arrival_time = 0  # arrival time of next job (initially that of the first job)
         self.next_job_number = 1  # job number starting from 1
         self.task_number = None
+        self.external_task_number = external_task_number # the task number w.r.t the multiprocessor task system
 
     def operation_step(self, current_time, job_queue: JobQueue):
         """

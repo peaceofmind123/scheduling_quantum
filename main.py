@@ -21,7 +21,6 @@ def overall_system():
 
     # run the partitioning algorithm and get the results
     solutions = [solver.solve(False) for solver in bbss] # just get solution, do not display
-    solutions = [get_partition_from_solution(s) for s in solutions]
     pass
 
 if __name__ == '__main__':

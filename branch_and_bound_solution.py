@@ -66,7 +66,7 @@ class BranchBoundSolver:
                 print('Problem solved in %d branch-and-bound nodes' % self.solver.nodes())
 
             # return the values
-            return self.x, self.solver.Objective().Value()
+            return self.get_partitioning_from_solution(), self.solver.Objective().Value()
         else:
             print('The problem does not have an optimal solution.')
 
@@ -90,7 +90,7 @@ class BranchBoundSolver:
 
                 # partition
                 if x[i][j].solution_value() == 1:  # means that task i has been assigned to processor j
-                    partitions[j].append(UniprocessorTask(wcet,deadline))
+                    partitions[j].append(UniprocessorTask(wcet,deadline,i+1)) # i+1 is the task number of multiprocessor task
         return partitions
 
 def main():

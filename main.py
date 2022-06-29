@@ -1,7 +1,7 @@
 """Overall system integration"""
 from TaskSystemGeneration import TaskSystemGenerator
 from branch_and_bound_solution import BranchBoundSolver
-from RTOS.RTOS_Objects import UniprocessorTask
+from RTOS.RTOS_Objects import UniprocessorTask, MultiprocessorRTOS
 
 def get_partition_from_solution(solution, solver):
 
@@ -20,8 +20,13 @@ def overall_system():
     bbss = [BranchBoundSolver(task_system) for task_system in task_systems] # the set of branch and bound solvers
 
     # run the partitioning algorithm and get the results
-    solutions = [solver.solve(False) for solver in bbss] # just get solution, do not display
-    pass
+    solutions:[([[UniprocessorTask]], float)] = [solver.solve(False) for solver in bbss] # just get solution, do not display
+
+    # create a multiprocessor rtos object for each task system
+    # solution[0] is the partitioned_tasks
+    # solution[1] is the worst-case utilization of the partitioning
+    multiprocessors_with_partitioned_tasks = [MultiprocessorRTOS(solution[0],solution[1]) for solution in solutions]
+
 
 if __name__ == '__main__':
     overall_system()

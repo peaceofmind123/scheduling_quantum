@@ -419,6 +419,17 @@ class RTOS:
 
         plt.show()
 
+class MultiprocessorRTOS:
+    """The multiprocessor real time operating system kernel"""
+    def __init__(self, partitioned_tasks:[[UniprocessorTask]], worst_case_utilization:float):
+        self.num_processors = len(partitioned_tasks)
+        try:
+            self.processors = [RTOS(tasks) for tasks in partitioned_tasks]
+            self.worst_case_utilization = worst_case_utilization
+        except ValueError as e:
+            # means that at least one of the partitioning is infeasible
+            print(e)
+
 
 if __name__ == '__main__':
     tasks = [UniprocessorTask(4,10),

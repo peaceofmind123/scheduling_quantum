@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from task_system import Task, TaskSystem
+import pickle
 
 class TaskSystemGenerator:
     """A wrapper for multiple task system generation algorithms"""
@@ -48,10 +49,29 @@ class TaskSystemGenerator:
         ts = TaskSystem(tasks)
         return ts
 
+    def generate_dataset(self, num_tasksystems:int, save_path:str):
+        """Generate a set of task systems with the given parameters"""
+        task_systems = [self.canonical_generate_tasks() for i in range(num_tasksystems)]
+        with open(save_path, 'wb') as f:
+            pickle.dump(task_systems, f)
+
+        return task_systems
+
 
 if __name__ == '__main__':
 
-    task_system_generator = TaskSystemGenerator(10,5,5,100,2)
-    task_system: TaskSystem = task_system_generator.canonical_generate_tasks()
-    pass
+    num_tasksystems = 10
+    num_tasks = 20
+    num_processors = 5
+    min_deadline = 5
+    max_deadline = 100
+    exp_scale = 2
+    save_path = f'tasksystem-{10}-{20}-{5}.pkl'
+    task_system_generator = TaskSystemGenerator(num_tasks, num_processors,
+                                                min_deadline, max_deadline, exp_scale)
+    task_systems = task_system_generator.generate_dataset(num_tasksystems, save_path)
+
+
+
+
 

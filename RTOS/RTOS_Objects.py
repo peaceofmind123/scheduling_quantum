@@ -8,6 +8,8 @@ import plotly.express as px
 import matplotlib.patches as mpatches
 
 import matplotlib.pyplot as plt
+from itertools import chain
+
 
 EXP_SCALE = 2.0
 class JobQueue:
@@ -349,7 +351,7 @@ class RTOS:
     def set_running(self, new_running):
         self.running.set_running(new_running, self.time_counter.current_time)
 
-    def generate_schedule_chart(self):
+    def generate_schedule_chart(self, processor_id=1):
         """
         Generate the schedule chart
         :return:
@@ -371,7 +373,7 @@ class RTOS:
         # Setting ticks on y-axis
         gnt.set_yticks([3])
         # Labelling tickes of y-axis
-        gnt.set_yticklabels(['1'])
+        gnt.set_yticklabels([f'{processor_id}'])
 
         # Setting graph attribute
         gnt.grid(True)
@@ -423,6 +425,7 @@ class MultiprocessorRTOS:
     """The multiprocessor real time operating system kernel"""
     def __init__(self, partitioned_tasks:[[UniprocessorTask]], worst_case_utilization:float):
         self.num_processors = len(partitioned_tasks)
+        self.max_iterations = 0 # set by the main loop, for logging purposes
         try:
             self.processors = [RTOS(tasks) for tasks in partitioned_tasks]
             self.worst_case_utilization = worst_case_utilization
@@ -430,6 +433,91 @@ class MultiprocessorRTOS:
             # means that at least one of the partitioning is infeasible
             print(e)
 
+    def main_loop(self, max_iterations):
+        # just call the main loop of each processor
+        self.max_iterations = max_iterations
+        [processor.main_loop(max_iterations) for processor in self.processors]
+
+    def generate_schedule_chart(self):
+        # Declaring a figure "gnt"
+        fig, gnt = plt.subplots()
+
+        # Setting Y-axis limits
+        gnt.set_ylim(3, (13+3)*self.num_processors) # 3 being the padding between the figures
+
+        # Setting X-axis limits
+        gnt.set_xlim(0, self.max_iterations)
+
+        # Setting labels for x-axis and y-axis
+        gnt.set_xlabel('Logical Time')
+        gnt.set_ylabel('Processor')
+
+        # Setting ticks on y-axis
+        gnt.set_yticks([3*(i+1) for i in range(self.num_processors)])
+        # Labelling ticks of y-axis
+        gnt.set_yticklabels([f'{processor_id}' for processor_id in range(1,self.num_processors+1)])
+
+        # Setting graph attribute
+        gnt.grid(True)
+
+        # Declaring a bar in schedule
+        # event[2] is the arrival time of job on the processor
+        # event[3] is the session duration for the job
+        # the (3,5) tuple indicates that the bottom of the bar starts at 3 and has
+        # a height of 5
+        colors = []
+        tasks_encountered = []
+        color_map = {}
+
+        # get the events of all the tasks of all the processors
+        events = [event for event in (processor.logger.events for processor in self.processors)]
+        # flatten the events array
+        events = list(chain(*events))
+
+        for event in events:
+            if event[0] not in tasks_encountered:
+                r,g,b = random.randint(0,255,3)
+                color = '#%02x%02x%02x' % (r, g, b) # map rgb to hex
+                color_map[f'{event[0]}'] = color
+                colors.append(color)
+                tasks_encountered.append(event[0])
+            else:
+                colors.append(color_map[f'{event[0]}'])
+
+        for i in range(self.num_processors):
+            # get the events of the i'th processor
+            processor = self.processors[i]
+            events = processor.logger.events
+
+            # draw a gantt chart for each processor
+            # 3*(i+1) is the start value of ordinate
+            # 5*i is the ordinate distance taken by the height of the bar
+            # 3*i is the padding between the two adjacent bars
+            gnt.broken_barh([(event[2], event[3]) for event in events], (3*(i+1) + 5*i + i*3, 5),
+                           facecolors=colors)
+
+            # add annotation
+            # event[0] is the task_number
+            # event[1] is the job_number
+            # the 8 = 3 + 5 indicates the y position of the top of the bar
+            # the 3 and 5 are the padding and height of bar respectively
+            y_stagger = [2.2 if j % 2 == 0 else 0 for j in range(len(processor.logger.events))]
+            [gnt.annotate(f'{event[1]}', (event[2], 8.5 + y_stagger[j] + 3*i + 5*i)) for j, event in enumerate(processor.logger.events)]
+
+        # generate the legend for the tasks
+        # the key in color map is the task number
+        legend_patches = [mpatches.Patch(color=color_map[key], label=f'Task {key}') for key in color_map]
+        plt.legend(handles=legend_patches, bbox_to_anchor=(1.01,-0.28))
+
+
+        # set aspect ratio
+        ratio = 0.1 * self.num_processors
+        x_left, x_right = gnt.get_xlim()
+        y_low, y_high = gnt.get_ylim()
+        gnt.set_aspect(abs((x_right - x_left) / (y_low - y_high)) * ratio)
+        plt.savefig("gantt1.png", dpi=300, bbox_inches='tight')
+
+        plt.show()
 
 if __name__ == '__main__':
     tasks = [UniprocessorTask(4,10),
@@ -452,6 +540,7 @@ if __name__ == '__main__':
         rtos = RTOS(tasks2)
         rtos.main_loop(100)
         rtos.generate_schedule_chart()
+
     except ValueError as e: # means that the task system given is unschedulable
         print(e)
 

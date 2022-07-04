@@ -39,7 +39,7 @@ class TaskSystemGenerator:
                         utilizations[j] = np.random.exponential(self.exp_scale)
                         wcets[j] = int(math.floor(utilizations[j]*deadline))
 
-                        if utilizations[j] <= 1:
+                        if utilizations[j] <= 1 and utilizations[j] * deadline >= 1:
                             valid_utilization_counter += 1
                     else:
                         # it is already valid, so skip

@@ -453,7 +453,7 @@ class MultiprocessorRTOS:
         gnt.set_ylabel('Processor')
 
         # Setting ticks on y-axis
-        gnt.set_yticks([3*(i+1) for i in range(self.num_processors)])
+        gnt.set_yticks([3*(i+1) + 5*i for i in range(self.num_processors)])
         # Labelling ticks of y-axis
         gnt.set_yticklabels([f'{processor_id}' for processor_id in range(1,self.num_processors+1)])
 
@@ -493,7 +493,7 @@ class MultiprocessorRTOS:
             # 3*(i+1) is the start value of ordinate
             # 5*i is the ordinate distance taken by the height of the bar
             # 3*i is the padding between the two adjacent bars
-            gnt.broken_barh([(event[2], event[3]) for event in events], (3*(i+1) + 5*i + i*3, 5),
+            gnt.broken_barh([(event[2], event[3]) for event in events], (3*(i+1) + 5*i , 5),
                            facecolors=colors)
 
             # add annotation

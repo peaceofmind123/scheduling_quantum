@@ -32,10 +32,13 @@ class TaskSystemGenerator:
             while not valid_utilization_counter == self.num_processors:
                 valid_utilization_counter = 0
                 for j in range(self.num_processors):
-                    if utilizations[j] > 1:
+                    # the first condition prevents trivially infeasible task systems
+                    # the second condition prevents wcets[j] to be 0
+                    if utilizations[j] > 1 or utilizations[j] * deadline < 1:
                         # invalid, so generate new utilization and wcet
                         utilizations[j] = np.random.exponential(self.exp_scale)
                         wcets[j] = int(math.floor(utilizations[j]*deadline))
+
                         if utilizations[j] <= 1:
                             valid_utilization_counter += 1
                     else:

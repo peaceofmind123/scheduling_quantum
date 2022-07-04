@@ -439,6 +439,8 @@ class MultiprocessorRTOS:
         [processor.main_loop(max_iterations) for processor in self.processors]
 
     def generate_schedule_chart(self):
+        # some constants used, can be changed for difference in chart appearance
+
         # Declaring a figure "gnt"
         fig, gnt = plt.subplots()
 
@@ -471,18 +473,18 @@ class MultiprocessorRTOS:
 
         # get the events of all the tasks of all the processors
         events = [event for event in (processor.logger.events for processor in self.processors)]
-        # flatten the events array
-        events = list(chain(*events))
 
-        for event in events:
-            if event[0] not in tasks_encountered:
-                r,g,b = random.randint(0,255,3)
-                color = '#%02x%02x%02x' % (r, g, b) # map rgb to hex
-                color_map[f'{event[0]}'] = color
-                colors.append(color)
-                tasks_encountered.append(event[0])
-            else:
-                colors.append(color_map[f'{event[0]}'])
+        # the processor_events holds the events for each processor
+        for i, processor_events in enumerate(events):
+            for event in processor_events:
+                if (i, event[0]) not in tasks_encountered: # the processor id and event id uniquely identify the event
+                    r,g,b = random.randint(0,255,3)
+                    color = '#%02x%02x%02x' % (r, g, b) # map rgb to hex
+                    color_map[f'{i}{event[0]}'] = color
+                    colors.append(color)
+                    tasks_encountered.append((i,event[0]))
+                else:
+                    colors.append(color_map[f'{i}{event[0]}'])
 
         for i in range(self.num_processors):
             # get the events of the i'th processor

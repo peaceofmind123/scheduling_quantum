@@ -28,7 +28,7 @@ def overall_system():
     multiprocessors_with_partitioned_tasks = [MultiprocessorRTOS(solution[0],solution[1]) for solution in solutions]
 
     # generate the chart for the first multiprocessor RTOS for testing
-    multiprocessors_with_partitioned_tasks[0].main_loop(100)
+    multiprocessors_with_partitioned_tasks[0].main_loop(1000)
     multiprocessors_with_partitioned_tasks[0].generate_schedule_chart()
 
 if __name__ == '__main__':

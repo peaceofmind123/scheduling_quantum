@@ -53,7 +53,11 @@ def find_branch_bound_solutions_to_dataset(dataset_path, results_save_path):
                 bbs = BranchBoundSolver(task_system)
 
                 start = time.time_ns()
-                partitioning, optimal_objective = bbs.solve(False) # don't display output
+                try:
+                    partitioning, optimal_objective = bbs.solve(False) # don't display output
+                except TypeError as e:
+                    # this happens only when the system does not have a feasible solution
+                    partitioning = 'infeasible'
                 end = time.time_ns()
                 elapsed = end - start
 

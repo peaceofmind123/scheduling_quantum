@@ -68,7 +68,7 @@ class BranchBoundSolver:
             # return the values
             return self.get_partitioning_from_solution(), self.solver.Objective().Value()
         else:
-            print('The problem does not have an optimal solution.')
+            print('The problem does not have a feasible solution.')
 
     def get_partitioning_from_solution(self):
         """To be called after solve is called"""

@@ -68,9 +68,19 @@ def find_branch_bound_solutions_to_dataset(dataset_path, results_save_path):
     with open(results_save_path, 'wb') as f:
         pickle.dump(dataset, f)
 
-if __name__ == '__main__':
+def generate_dataset_script():
     save_path = './datasets/dataset_problem_size_runtime_1.pkl'
     num_task_systems_per_iteration = 10
     max_num_tasks = 10
     max_num_processors = 10
-    generate_dataset(save_path,num_task_systems_per_iteration, max_num_tasks,max_num_processors)
+    generate_dataset(save_path, num_task_systems_per_iteration, max_num_tasks, max_num_processors)
+
+
+def generate_solution_dataset_script():
+    dataset_path = './datasets/dataset_problem_size_runtime_1.pkl'
+    solution_save_path = './datasets/dataset_solutions_problem_size_runtime_1.pkl'
+    find_branch_bound_solutions_to_dataset(dataset_path,solution_save_path)
+
+
+if __name__ == '__main__':
+    generate_solution_dataset_script()

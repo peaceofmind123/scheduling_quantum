@@ -66,7 +66,7 @@ def solve_cqm(cqm, sampler):
     :return: sample_set: the set of feasible solutions to the problem
                         or None if no feasible solution is found
     """
-
+    print(f'min time limit: {sampler.min_time_limit(cqm)}')
     # find the entire solution set (with a time limit of 10 seconds to find the solution)
     sample_set = sampler.sample_cqm(cqm, time_limit=10, label='Partitioning solution')
 

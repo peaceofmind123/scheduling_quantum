@@ -66,7 +66,7 @@ class BranchBoundSolver:
                 print('Problem solved in %d branch-and-bound nodes' % self.solver.nodes())
 
             # return the values
-            return self.get_partitioning_from_solution(), self.solver.Objective().Value()
+            return self.get_partitioning_from_solution(), self.solver.Objective().Value(), self.solver.wall_time()
         else:
             print('The problem does not have a feasible solution.')
 

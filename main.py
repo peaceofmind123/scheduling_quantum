@@ -20,11 +20,12 @@ def overall_system():
     bbss = [BranchBoundSolver(task_system) for task_system in task_systems] # the set of branch and bound solvers
 
     # run the partitioning algorithm and get the results
-    solutions:[([[UniprocessorTask]], float)] = [solver.solve(False) for solver in bbss] # just get solution, do not display
+    solutions:[([[UniprocessorTask]], float, float)] = [solver.solve(False) for solver in bbss] # just get solution, do not display
 
     # create a multiprocessor rtos object for each task system
     # solution[0] is the partitioned_tasks
     # solution[1] is the worst-case utilization of the partitioning
+    # solution[2] is the time taken to find the solution (ms)
     multiprocessors_with_partitioned_tasks = [MultiprocessorRTOS(solution[0],solution[1]) for solution in solutions]
 
     # generate the chart for the first multiprocessor RTOS for testing

@@ -12,6 +12,9 @@ from dimod import Binary, ConstrainedQuadraticModel, quicksum, ExactCQMSolver
 from dwave.system import LeapHybridCQMSampler
 from task_system import TaskSystem, Task
 import itertools
+import re
+from RTOS.RTOS_Objects import UniprocessorTask
+import time
 
 try:
     import matplotlib.pyplot as plt
@@ -79,6 +82,88 @@ def solve_cqm(cqm, sampler):
         return None
     
     return feasible_sampleset
+
+
+class AnnealingSolver:
+    """
+    The annealing solver
+    """
+    def __init__(self, taskSystem: TaskSystem):
+        self.taskSystem = taskSystem
+        # the partitions found from the optimal solution
+        self.partitions = []
+        # the optimal objective
+        self.optimal_objective = None
+
+    def get_partitioning_from_solution(self, solution):
+        """
+        Get the partitioning from the annealing solution
+        :param solution: Contains a dict of the form {'x_0,0':0, 'x_0,1':1,...} as .first where 0 indicates
+        task non assignment and 1 indicates task assignment
+        :return:
+        """
+        # get the optimal solution
+        optimal_solution = solution.first.sample
+
+        # fill this array with arrays of uniprocessor tasks for the corresponding processor
+        partitions = [[] for j in range(self.taskSystem.num_processors)]
+
+        for decision_variable in optimal_solution:
+            value = optimal_solution[decision_variable]
+
+            # find the i and j values from the decision variables
+            # the decision variable is of the form x_i,j
+            i, j = re.findall("[0-9]", decision_variable)
+            i = int(i) # i is now the task id
+            j = int(j) # j is the processor id
+            if value == 1:
+                # means task i has been assigned to processor j
+                # get the task
+                task = self.taskSystem.tasks[i]
+                # get the wcet of task i on processor j
+                wcet = task.wcet_array[j]
+                # get the deadline
+                deadline = task.deadline
+
+                # i+1 is the task number w.r.t the multiprocessor task system
+                uniprocessor_task = UniprocessorTask(wcet,deadline,i+1)
+                partitions[j].append(uniprocessor_task)
+
+        self.partitions = partitions
+        return partitions
+
+    def solve(self, display_output=True):
+        """
+        A wrapper function that matches the external interface of branch and bound solution
+        so that downstream tasks can use these functions interchangably
+        :arg display_output: dummy arg, to match the interface
+        :return:
+        """
+        # build cqm problem from the tasksystem
+        cqm = build_cqm(self.taskSystem)
+
+        # sample using the leap hybrid cqm sampler
+        sampler = LeapHybridCQMSampler()
+        # the solution given here is actually a set of feasible solutions
+        # the optimal solution is found in the subsequent step
+
+        # measure the running time
+        before = time.time_ns()
+        solution = solve_cqm(cqm, sampler)
+        after = time.time_ns()
+        elapsed = (after - before) / 1e6 # get time elapsed in milliseconds
+
+        # get the partitioning from the optimal solution
+        self.get_partitioning_from_solution(solution)
+
+        # set the optimal objective
+        self.optimal_objective = solution.first.energy
+
+        return self.partitions, self.optimal_objective, elapsed
+
+
+
+
 
 if __name__ == '__main__':
     # a test tasksystem

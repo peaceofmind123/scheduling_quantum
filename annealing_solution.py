@@ -161,9 +161,13 @@ class AnnealingSolver:
 
         return self.partitions, self.optimal_objective, elapsed
 
-
-
-
+    def get_lower_bound(self, sampler:LeapHybridCQMSampler):
+        """
+        Get the lower bound for solution of the task system
+        :return: lower_bound: min time in milliseconds to solve the problem
+        """
+        cqm = build_cqm(self.taskSystem)
+        return sampler.min_time_limit(cqm)
 
 if __name__ == '__main__':
     # a test tasksystem

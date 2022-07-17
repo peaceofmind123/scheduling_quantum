@@ -1,25 +1,30 @@
 from typing import List
+
+from dwave.system import LeapHybridCQMSampler
+
 from branch_and_bound_solution import BranchBoundSolver
 from TaskSystemGeneration import TaskSystemGenerator
 from task_system import TaskSystem
 import pickle
 import time
 import matplotlib.pyplot as plt
+from annealing_solution import AnnealingSolver
 
 """ Initially, independent functional units will be written
     as the full picture of the analysis is not in my head yet"""
 
 
 def generate_dataset(save_path, num_tasksystems_per_iteration, max_num_tasks, max_num_processors,
-                     min_deadline=5, max_deadline=100, exp_scale=2.0):
+                     min_deadline=5, max_deadline=100, exp_scale=2.0, steps_to_take=1, min_num_tasks=2, min_num_processors=2 ):
     """
     Generates the heirarchical dataset for the first analysis
+    :arg steps_to_take: increments in the number of tasks and number of processors
     :return:
     """
     dataset = {}
-    for num_tasks in range(2, max_num_tasks + 1):
+    for num_tasks in range(min_num_tasks, max_num_tasks + 1, steps_to_take):
         dataset[f'{num_tasks}'] = {}
-        for num_processors in range(2, max_num_processors + 1):
+        for num_processors in range(min_num_processors, max_num_processors + 1, steps_to_take):
             # number of tasks should be >= number of processors
             if num_tasks < num_processors:
                 continue
@@ -180,16 +185,57 @@ def generateNCurves(xlabel, ylabel, save_path, xss,yss, fig_idx,
 
     plt.savefig(fname=save_path, dpi=600, bbox_inches='tight')
 
+def find_annealing_lower_bounds(dataset_save_path, annealing_lower_bound_save_path):
+    """
+    Save the lower bounds given by the annealer on the running time and save it second dataset
+    :param dataset_save_path:
+    :param annealing_lower_bound_save_path:
+    :return:
+    """
+    sampler = LeapHybridCQMSampler()
+    # this will store the lower bounds corresponding to the problem size
+    # will be of the form {problem_size1: [lb1, lb2...]}
+    # eg: {50: [3,4,3,2],...}
+    lower_bounds = {}
+
+    with open(dataset_save_path, 'rb') as f:
+        dataset = pickle.load(f)
+
+    for n_tasks in dataset:
+        num_tasks = int(n_tasks)
+        for n_procs in dataset[n_tasks]:
+            num_processors = int(n_procs)
+            # calculate the problem size
+            problem_size = num_tasks * num_processors
+            # the set of r task systems with n_tasks tasks and n_procs processors
+            task_systems = dataset[n_tasks][n_procs]
+            for task_system in task_systems:
+                annealing_solver = AnnealingSolver(task_system)
+                lower_bound = annealing_solver.get_lower_bound(sampler)
+                if problem_size in lower_bounds:
+                    lower_bounds[problem_size].append(lower_bound)
+                else:
+                    lower_bounds[problem_size] = [lower_bound]
+
+    with open(annealing_lower_bound_save_path,'wb') as f:
+        pickle.dump(lower_bounds,f)
+
+
+
 def end_to_end_analysis():
     dataset_save_path = './datasets/dataset_problem_size_runtime_2.pkl'
     solution_dataset_save_path = './datasets/dataset_solutions_problem_size_runtime_2.pkl'
-    max_num_tasks = 50
-    max_num_processors = 10
-    num_tasksystems_per_iteration = 100
+    annealing_lower_bound_save_path = './datasets/dataset_anneal_lower_bound.pkl'
+    max_num_tasks = 5000
+    max_num_processors = 1000
+    num_tasksystems_per_iteration = 3
     curve_save_path = './graphs/problem_size_avg_runtime.png'
 
     # generate the tasksystems dataset
-    generate_dataset(dataset_save_path,num_tasksystems_per_iteration,max_num_tasks,max_num_processors)
+    generate_dataset(dataset_save_path,num_tasksystems_per_iteration,max_num_tasks,max_num_processors,steps_to_take=500)
+    # generate the lower bounds dataset
+    find_annealing_lower_bounds(dataset_save_path, annealing_lower_bound_save_path)
+
     # generate dataset with solutions and runtimes
     find_branch_bound_solutions_to_dataset(dataset_save_path,solution_dataset_save_path)
 

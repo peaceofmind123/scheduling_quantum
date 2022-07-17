@@ -57,11 +57,15 @@ def build_cqm(taskSystem: TaskSystem):
     for i in task_ids:
         objective.append([x[i][j]*taskSystem.tasks[i].wcet_array[j]/taskSystem.tasks[i].deadline for j in processor_ids])
 
+    chained_objective = itertools.chain(*objective)
+    chained_objective_list = list(chained_objective)
+    sum_objective = sum(chained_objective_list) # the bottleneck
+    cqm.set_objective(sum_objective)
     cqm.set_objective(sum(list(itertools.chain(*objective))))
 
     return cqm
 
-def solve_cqm(cqm, sampler):
+def solve_cqm(cqm, sampler,time_limit=10):
     """
     Solve the given cqm using the given sampler
     :param cqm: the constrained quadratic model object
@@ -71,7 +75,7 @@ def solve_cqm(cqm, sampler):
     """
     print(f'min time limit: {sampler.min_time_limit(cqm)}')
     # find the entire solution set (with a time limit of 10 seconds to find the solution)
-    sample_set = sampler.sample_cqm(cqm, time_limit=10, label='Partitioning solution')
+    sample_set = sampler.sample_cqm(cqm, time_limit=time_limit, label='Partitioning solution')
 
     # filter out the infeasible solutions, keeping only the feasible ones
     feasible_sampleset = sample_set.filter(lambda row: row.is_feasible)
@@ -113,7 +117,7 @@ class AnnealingSolver:
 
             # find the i and j values from the decision variables
             # the decision variable is of the form x_i,j
-            i, j = re.findall("[0-9]", decision_variable)
+            i, j = re.findall("[0-9]", decision_variable) #TODO: fix this does not work for x_0,100 since it gives [0,1,0,0] as output
             i = int(i) # i is now the task id
             j = int(j) # j is the processor id
             if value == 1:
@@ -132,7 +136,7 @@ class AnnealingSolver:
         self.partitions = partitions
         return partitions
 
-    def solve(self, display_output=True):
+    def solve(self, display_output=True,time_limit=10):
         """
         A wrapper function that matches the external interface of branch and bound solution
         so that downstream tasks can use these functions interchangably
@@ -149,7 +153,7 @@ class AnnealingSolver:
 
         # measure the running time
         before = time.time_ns()
-        solution = solve_cqm(cqm, sampler)
+        solution = solve_cqm(cqm, sampler,time_limit)
         after = time.time_ns()
         elapsed = (after - before) / 1e6 # get time elapsed in milliseconds
 

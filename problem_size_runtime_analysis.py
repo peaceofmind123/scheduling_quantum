@@ -8,7 +8,7 @@ from task_system import TaskSystem
 import pickle
 import time
 import matplotlib.pyplot as plt
-from annealing_solution import AnnealingSolver
+from annealing_solution import AnnealingSolver, build_cqm, solve_cqm
 
 """ Initially, independent functional units will be written
     as the full picture of the analysis is not in my head yet"""
@@ -242,8 +242,51 @@ def end_to_end_analysis():
     problem_size_runtime = get_problem_size_and_runtime_from_solution_dataset(solution_dataset_save_path)
     generate_problem_size_vs_runtime_curve(problem_size_runtime,curve_save_path)
 
+def lower_bound_analysis():
+    """
+    Find out where the lower bound of the annealer starts to grow
+    :return:
+    """
+    min_num_tasks = 100
+    min_num_processors = 50
+    sampler = LeapHybridCQMSampler()
+    lower_bounds = []
+    for i in range(10):
+        num_tasks = min_num_tasks + i*100
+        num_processors = min_num_processors +i*50
 
+        tsg:TaskSystemGenerator = TaskSystemGenerator(num_tasks,num_processors,1000,5000,2.0)
+        task_system:TaskSystem = tsg.canonical_generate_tasks()
+        annealing_solver = AnnealingSolver(task_system)
+        lower_bound = annealing_solver.get_lower_bound(sampler)
+        lower_bounds.append(lower_bound)
+    print(lower_bounds)
+
+def single_tasksystem_solution_experiment():
+    """
+    Experiment of partitioning a single task system of a considerable size with a 5s time limit
+    :return:
+    """
+    num_tasks = 200
+    num_processors = 100
+    min_deadline = 1000
+    max_deadline = 2000
+    exp_scale = 2.0
+    tsg = TaskSystemGenerator(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
+    taskSystem:TaskSystem = tsg.canonical_generate_tasks()
+
+    # build cqm problem from the tasksystem
+    cqm = build_cqm(taskSystem)
+
+    # sample using the leap hybrid cqm sampler
+    sampler = LeapHybridCQMSampler()
+    solutions = solve_cqm(cqm, sampler, time_limit=5)
+    with open('./results/solution_200_100.pkl','wb') as f:
+        pickle.dump(solutions,f)
 
 
 if __name__ == '__main__':
-    end_to_end_analysis()
+    #end_to_end_analysis()
+    #lower_bound_analysis()
+    #single_tasksystem_solution_experiment()
+    pass

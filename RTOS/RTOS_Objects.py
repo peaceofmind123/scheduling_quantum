@@ -131,8 +131,10 @@ class Running:
 
         :return:
         """
-
-        return self.running.task.task_number, self.running.job_number, self.arrival_time_on_processor, self.session_duration
+        #TODO: if running the uniprocessor scheduler throws some error, it can originate from this
+        # try replacing self.running.task.task_number as the first return value
+        # cuz while running only uniprocessor task systems, external task numbers may not have been assigned
+        return self.running.task.external_task_number, self.running.job_number, self.arrival_time_on_processor, self.session_duration
 
     def set_log(self, logger):
         event = self.get_event()
@@ -485,15 +487,16 @@ class MultiprocessorRTOS:
 
         # the processor_events holds the events for each processor
         for i, processor_events in enumerate(events):
+            colors.append([])
             for event in processor_events:
-                if (i+1, event[0]) not in tasks_encountered: # the processor id and event id uniquely identify the event
+                if event[0] not in tasks_encountered: # the processor id and event id uniquely identify the event
                     r,g,b = random.randint(0,255,3)
                     color = '#%02x%02x%02x' % (r, g, b) # map rgb to hex
-                    color_map[f'{i+1}{event[0]}'] = color
-                    colors.append(color)
-                    tasks_encountered.append((i+1, event[0]))
+                    color_map[f'{event[0]}'] = color
+                    colors[i].append(color)
+                    tasks_encountered.append(event[0])
                 else:
-                    colors.append(color_map[f'{i+1}{event[0]}'])
+                    colors[i].append(color_map[f'{event[0]}'])
 
         for i in range(self.num_processors):
             # get the events of the i'th processor
@@ -505,7 +508,7 @@ class MultiprocessorRTOS:
             # 5*i is the ordinate distance taken by the height of the bar
             # 3*i is the padding between the two adjacent bars
             gnt.broken_barh([(event[2], event[3]) for event in events], (initial_y_offset + i*(bar_height+vertical_padding) , bar_height),
-                           facecolors=colors)
+                           facecolors=colors[i])
 
             # add annotation
             # event[0] is the task_number

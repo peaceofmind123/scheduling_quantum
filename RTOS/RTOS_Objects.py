@@ -476,7 +476,12 @@ class MultiprocessorRTOS:
         color_map = {}
 
         # get the events of all the tasks of all the processors
-        events = [event for event in (processor.logger.events for processor in self.processors)]
+        events = []
+        for processor in self.processors:
+            processor_events = processor.logger.events
+            events.append(processor_events)
+
+        #events = [event for event in (processor.logger.events for processor in self.processors)]
 
         # the processor_events holds the events for each processor
         for i, processor_events in enumerate(events):

@@ -440,12 +440,16 @@ class MultiprocessorRTOS:
 
     def generate_schedule_chart(self):
         # some constants used, can be changed for difference in chart appearance
+        bar_height = 5
+        vertical_padding = 5
+        initial_y_offset = 3
+        stagger = 2.2
 
         # Declaring a figure "gnt"
         fig, gnt = plt.subplots()
 
         # Setting Y-axis limits
-        gnt.set_ylim(3, (13+3)*self.num_processors) # 3 being the padding between the figures
+        gnt.set_ylim(initial_y_offset, initial_y_offset + (bar_height+vertical_padding)*self.num_processors) # 3 being the padding between the figures
 
         # Setting X-axis limits
         gnt.set_xlim(0, self.max_iterations)
@@ -455,7 +459,7 @@ class MultiprocessorRTOS:
         gnt.set_ylabel('Processor')
 
         # Setting ticks on y-axis
-        gnt.set_yticks([3*(i+1) + 5*i for i in range(self.num_processors)])
+        gnt.set_yticks([initial_y_offset + (vertical_padding + bar_height)*i for i in range(self.num_processors)])
         # Labelling ticks of y-axis
         gnt.set_yticklabels([f'{processor_id}' for processor_id in range(1,self.num_processors+1)])
 
@@ -477,14 +481,14 @@ class MultiprocessorRTOS:
         # the processor_events holds the events for each processor
         for i, processor_events in enumerate(events):
             for event in processor_events:
-                if (i, event[0]) not in tasks_encountered: # the processor id and event id uniquely identify the event
+                if (i+1, event[0]) not in tasks_encountered: # the processor id and event id uniquely identify the event
                     r,g,b = random.randint(0,255,3)
                     color = '#%02x%02x%02x' % (r, g, b) # map rgb to hex
-                    color_map[f'{i}{event[0]}'] = color
+                    color_map[f'{i+1}{event[0]}'] = color
                     colors.append(color)
-                    tasks_encountered.append((i,event[0]))
+                    tasks_encountered.append((i+1, event[0]))
                 else:
-                    colors.append(color_map[f'{i}{event[0]}'])
+                    colors.append(color_map[f'{i+1}{event[0]}'])
 
         for i in range(self.num_processors):
             # get the events of the i'th processor
@@ -495,7 +499,7 @@ class MultiprocessorRTOS:
             # 3*(i+1) is the start value of ordinate
             # 5*i is the ordinate distance taken by the height of the bar
             # 3*i is the padding between the two adjacent bars
-            gnt.broken_barh([(event[2], event[3]) for event in events], (3*(i+1) + 5*i , 5),
+            gnt.broken_barh([(event[2], event[3]) for event in events], (initial_y_offset + i*(bar_height+vertical_padding) , bar_height),
                            facecolors=colors)
 
             # add annotation
@@ -503,8 +507,8 @@ class MultiprocessorRTOS:
             # event[1] is the job_number
             # the 8 = 3 + 5 indicates the y position of the top of the bar
             # the 3 and 5 are the padding and height of bar respectively
-            y_stagger = [2.2 if j % 2 == 0 else 0 for j in range(len(processor.logger.events))]
-            [gnt.annotate(f'{event[1]}', (event[2], 8.5 + y_stagger[j] + 3*i + 5*i)) for j, event in enumerate(processor.logger.events)]
+            y_stagger = [stagger if j % 2 == 0 else 0 for j in range(len(processor.logger.events))]
+            [gnt.annotate(f'{event[1]}', (event[2], initial_y_offset + bar_height + y_stagger[j] + (bar_height + vertical_padding)*i)) for j, event in enumerate(processor.logger.events)]
 
         # generate the legend for the tasks
         # the key in color map is the task number

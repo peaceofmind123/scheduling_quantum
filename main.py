@@ -8,11 +8,11 @@ def get_partition_from_solution(solution, solver):
     x, objective_value = solution
 
 def overall_system():
-    num_tasksystems = 10
-    num_tasks = 20
-    num_processors = 5
+    num_tasksystems = 1
+    num_tasks = 5
+    num_processors = 3
     min_deadline = 5
-    max_deadline = 100
+    max_deadline = 30
     exp_scale = 2
 
     tsg = TaskSystemGenerator(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
@@ -29,7 +29,7 @@ def overall_system():
     multiprocessors_with_partitioned_tasks = [MultiprocessorRTOS(solution[0],solution[1]) for solution in solutions]
 
     # generate the chart for the first multiprocessor RTOS for testing
-    multiprocessors_with_partitioned_tasks[0].main_loop(1000)
+    multiprocessors_with_partitioned_tasks[0].main_loop(100)
     multiprocessors_with_partitioned_tasks[0].generate_schedule_chart()
 
 if __name__ == '__main__':

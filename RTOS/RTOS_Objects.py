@@ -67,6 +67,11 @@ class UniprocessorTask:
         self.next_job_number += 1
         job_queue.enqueue(job)
 
+    def print(self):
+        print(f'task number: {self.external_task_number}')
+        print(f'wcet array: {self.wcet}')
+        print(f'deadline: {self.deadline}')
+
 class Job:
     def __init__(self, task:UniprocessorTask, job_number, arrival_time, execution_time, current_time):
         self.task = task
@@ -520,7 +525,7 @@ class MultiprocessorRTOS:
 
         # generate the legend for the tasks
         # the key in color map is the task number
-        legend_patches = [mpatches.Patch(color=color_map[key], label=f'Task {key}') for key in color_map]
+        legend_patches = [mpatches.Patch(color=color_map[key], label=f'Task {key}') for key in sorted(color_map)]
         plt.legend(handles=legend_patches, bbox_to_anchor=(1.01,-0.28))
 
 

@@ -4,12 +4,28 @@ class Task:
         self.wcet_array = wcet_array
         self.deadline = deadline
 
+    def print(self):
+        """
+        Print the information pertaining to the task
+        :return:
+        """
+        print(f'wcet array: {self.wcet_array}')
+        print(f'deadline: {self.deadline}')
+
 class TaskSystem:
     def __init__(self, tasks:[Task]):
         self.tasks = tasks
         self.num_tasks = len(self.tasks)
         self.num_processors = len(self.tasks[0].wcet_array)
 
+    def print(self):
+        """
+        Print the details of the task system
+        :return:
+        """
+        for i, task in enumerate(self.tasks):
+            print(f'Task number: {i+1}')
+            task.print()
 
 if __name__ == '__main__':
     ts = TaskSystem([Task([1,3,6,2],7),

@@ -272,8 +272,8 @@ def single_tasksystem_solution_experiment():
     Experiment of partitioning a single task system of a considerable size with a 5s time limit
     :return:
     """
-    num_tasks = 200
-    num_processors = 100
+    num_tasks = 503
+    num_processors = 250
     min_deadline = 1000
     max_deadline = 2000
     exp_scale = 2.0
@@ -286,12 +286,12 @@ def single_tasksystem_solution_experiment():
     # sample using the leap hybrid cqm sampler
     sampler = LeapHybridCQMSampler()
     solutions = solve_cqm(cqm, sampler, time_limit=5)
-    with open('./results/solution_200_100.pkl','wb') as f:
+    with open('./results/solution_503_250.pkl','wb') as f:
         pickle.dump(solutions,f)
 
 
 if __name__ == '__main__':
-    end_to_end_analysis()
+    #end_to_end_analysis()
     #lower_bound_analysis()
-    #single_tasksystem_solution_experiment()
+    single_tasksystem_solution_experiment()
     pass

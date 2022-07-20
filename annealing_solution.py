@@ -59,9 +59,12 @@ def build_cqm(taskSystem: TaskSystem):
 
     chained_objective = itertools.chain(*objective)
     chained_objective_list = list(chained_objective)
-    sum_objective = sum(chained_objective_list) # the bottleneck
+    sum_objective = 0
+    for obj in chained_objective_list:
+        sum_objective+=obj
+
     cqm.set_objective(sum_objective)
-    cqm.set_objective(sum(list(itertools.chain(*objective))))
+
 
     return cqm
 

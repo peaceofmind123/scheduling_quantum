@@ -318,6 +318,9 @@ if __name__ == '__main__':
     # for repeatability of the experiment(s)
     # use different seed for experiments of different sizes
     RANDOM_SEED = 10
+    tsg = TaskSystemGenerator(num_tasks, num_processors, min_deadline, max_deadline, exp_scale)
+    taskSystem: TaskSystem = tsg.canonical_generate_tasks()
+
     #single_tasksystem_solution_bbs_experiment(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
     single_tasksystem_solution_annealing_experiment(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
     pass

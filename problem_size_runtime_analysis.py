@@ -9,6 +9,7 @@ import pickle
 import time
 import matplotlib.pyplot as plt
 from annealing_solution import AnnealingSolver, build_cqm, solve_cqm
+from tqdm import tqdm
 
 """ Initially, independent functional units will be written
     as the full picture of the analysis is not in my head yet"""
@@ -22,7 +23,7 @@ def generate_dataset(save_path, num_tasksystems_per_iteration, max_num_tasks, ma
     :return:
     """
     dataset = {}
-    for num_tasks in range(min_num_tasks, max_num_tasks + 1, steps_to_take):
+    for num_tasks in tqdm(range(min_num_tasks, max_num_tasks + 1, steps_to_take)):
         dataset[f'{num_tasks}'] = {}
         for num_processors in range(min_num_processors, max_num_processors + 1, steps_to_take):
             # number of tasks should be >= number of processors
@@ -54,7 +55,7 @@ def find_solution_to_dataset(dataset_path, results_save_path, Solver):
     num_infeasible_tasksystems = 0
     total_num_tasksystems = 0
     # iterate through the dataset
-    for num_tasks in dataset:  # num_tasks is the first key
+    for num_tasks in tqdm(dataset):  # num_tasks is the first key
         for num_processors in dataset[num_tasks]:
             task_systems_set = dataset[num_tasks][num_processors]
 
@@ -118,7 +119,7 @@ def get_problem_size_and_runtime_from_solution_dataset(solution_save_path='./dat
 
     problem_sizes_to_runtime_dict = {}
 
-    for num_tasks in dataset:  # num_tasks is the first key
+    for num_tasks in tqdm(dataset):  # num_tasks is the first key
         for num_processors in dataset[num_tasks]:
             task_systems_set = dataset[num_tasks][num_processors]
 
@@ -226,19 +227,23 @@ def end_to_end_analysis():
     dataset_save_path = './datasets/dataset_problem_size_runtime_2.pkl'
     solution_dataset_save_path = './datasets/dataset_solutions_problem_size_runtime_2.pkl'
     annealing_lower_bound_save_path = './datasets/dataset_anneal_lower_bound.pkl'
-    max_num_tasks = 5000
-    max_num_processors = 1000
-    num_tasksystems_per_iteration = 3
-    curve_save_path = './graphs/problem_size_avg_runtime.png'
+    max_num_tasks = 503
+    max_num_processors = 250
+    num_tasksystems_per_iteration = 10
+    num_tasks_step_size = 100
+    curve_save_path = './graphs/problem_size_avg_runtime_3.png'
 
     # generate the tasksystems dataset
-    generate_dataset(dataset_save_path,num_tasksystems_per_iteration,max_num_tasks,max_num_processors,steps_to_take=500)
+    print('starting dataset generation')
+    generate_dataset(dataset_save_path,num_tasksystems_per_iteration,max_num_tasks,max_num_processors,steps_to_take=num_tasks_step_size)
     # generate the lower bounds dataset
-    find_annealing_lower_bounds(dataset_save_path, annealing_lower_bound_save_path)
+    #find_annealing_lower_bounds(dataset_save_path, annealing_lower_bound_save_path)
 
     # generate dataset with solutions and runtimes
+    print('finding solutions')
     find_branch_bound_solutions_to_dataset(dataset_save_path,solution_dataset_save_path)
 
+    print('parsing solutions')
     problem_size_runtime = get_problem_size_and_runtime_from_solution_dataset(solution_dataset_save_path)
     generate_problem_size_vs_runtime_curve(problem_size_runtime,curve_save_path)
 
@@ -286,7 +291,7 @@ def single_tasksystem_solution_experiment():
 
 
 if __name__ == '__main__':
-    #end_to_end_analysis()
+    end_to_end_analysis()
     #lower_bound_analysis()
     #single_tasksystem_solution_experiment()
     pass

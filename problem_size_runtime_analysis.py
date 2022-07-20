@@ -267,16 +267,12 @@ def lower_bound_analysis():
         lower_bounds.append(lower_bound)
     print(lower_bounds)
 
-def single_tasksystem_solution_experiment():
+def single_tasksystem_solution_annealing_experiment(
+        num_tasks, num_processors, min_deadline, max_deadline, exp_scale):
     """
     Experiment of partitioning a single task system of a considerable size with a 5s time limit
     :return:
     """
-    num_tasks = 503
-    num_processors = 250
-    min_deadline = 1000
-    max_deadline = 2000
-    exp_scale = 2.0
     tsg = TaskSystemGenerator(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
     taskSystem:TaskSystem = tsg.canonical_generate_tasks()
 
@@ -289,9 +285,39 @@ def single_tasksystem_solution_experiment():
     with open('./results/solution_503_250.pkl','wb') as f:
         pickle.dump(solutions,f)
 
+def single_tasksystem_solution_bbs_experiment(
+        num_tasks, num_processors, min_deadline, max_deadline,
+        exp_scale):
+    """
+    Branch and bound solution experiment of a single task system
+    :return:
+    """
+
+    tsg = TaskSystemGenerator(num_tasks, num_processors, min_deadline, max_deadline, exp_scale)
+    taskSystem: TaskSystem = tsg.canonical_generate_tasks()
+
+    bbs = BranchBoundSolver(taskSystem)
+
+    try:
+        partitioning, optimal_objective, runtime_ms = bbs.solve(False)  # don't display output
+        print(f'Problem size: {num_tasks * num_processors} Runtime: {runtime_ms} milliseconds')
+    except Exception as e:
+        print("Infeasible task system")
+
+
+
 
 if __name__ == '__main__':
     #end_to_end_analysis()
     #lower_bound_analysis()
-    single_tasksystem_solution_experiment()
+    num_tasks = 7000
+    num_processors = 90
+    min_deadline = 100
+    max_deadline = 200
+    exp_scale = 2.0
+    # for repeatability of the experiment(s)
+    # use different seed for experiments of different sizes
+    RANDOM_SEED = 10
+    #single_tasksystem_solution_bbs_experiment(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
+    single_tasksystem_solution_annealing_experiment(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
     pass

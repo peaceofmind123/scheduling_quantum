@@ -71,6 +71,7 @@ if __name__ == '__main__':
     min_deadline = 5
     max_deadline = 100
     exp_scale = 2
+
     save_path = f'tasksystem-{10}-{20}-{5}.pkl'
     task_system_generator = TaskSystemGenerator(num_tasks, num_processors,
                                                 min_deadline, max_deadline, exp_scale)

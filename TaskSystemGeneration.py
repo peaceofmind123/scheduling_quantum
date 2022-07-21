@@ -16,7 +16,7 @@ class TaskSystemGenerator:
         # the parameter of the exponential distribution used to generate the utilization
         self.exp_scale = exp_scale
 
-    def canonical_generate_tasks(self, seed=None):
+    def canonical_generate_tasks(self, ):
         """
         The canonical algorithm, suggested in the paper and mentioned in the proposal
         :return:
@@ -26,7 +26,7 @@ class TaskSystemGenerator:
         for i in range(self.num_tasks):
             utilizations = np.ones(self.num_processors) * 2
             wcets = np.zeros(self.num_processors, dtype=np.int64)
-            np.random.seed(seed)
+
             deadline = np.random.randint(self.min_deadline, self.max_deadline+1,)
 
 
@@ -38,7 +38,7 @@ class TaskSystemGenerator:
                     # the second condition prevents wcets[j] to be 0
                     if utilizations[j] > 1 or utilizations[j] * deadline < 1:
                         # invalid, so generate new utilization and wcet
-                        np.random.seed(seed)
+
                         utilizations[j] = np.random.exponential(self.exp_scale)
                         wcets[j] = int(math.floor(utilizations[j]*deadline))
 

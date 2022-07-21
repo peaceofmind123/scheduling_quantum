@@ -16,16 +16,16 @@ from tqdm import tqdm
 
 
 def generate_dataset(save_path, num_tasksystems_per_iteration, max_num_tasks, max_num_processors,
-                     min_deadline=5, max_deadline=100, exp_scale=2.0, steps_to_take=1, min_num_tasks=2, min_num_processors=2 ):
+                     min_deadline=5, max_deadline=100, exp_scale=2.0, steps_num_tasks=1,steps_num_processors=1, min_num_tasks=2, min_num_processors=2):
     """
     Generates the heirarchical dataset for the first analysis
-    :arg steps_to_take: increments in the number of tasks and number of processors
+    :arg steps_num_tasks: increments in the number of tasks and number of processors
     :return:
     """
     dataset = {}
-    for num_tasks in tqdm(range(min_num_tasks, max_num_tasks + 1, steps_to_take)):
+    for num_tasks in tqdm(range(min_num_tasks, max_num_tasks + 1, steps_num_tasks)):
         dataset[f'{num_tasks}'] = {}
-        for num_processors in range(min_num_processors, max_num_processors + 1, steps_to_take):
+        for num_processors in range(min_num_processors, max_num_processors + 1, steps_num_processors):
             # number of tasks should be >= number of processors
             if num_tasks < num_processors:
                 continue
@@ -202,7 +202,7 @@ def find_annealing_lower_bounds(dataset_save_path, annealing_lower_bound_save_pa
     with open(dataset_save_path, 'rb') as f:
         dataset = pickle.load(f)
 
-    for n_tasks in dataset:
+    for n_tasks in tqdm(dataset):
         num_tasks = int(n_tasks)
         for n_procs in dataset[n_tasks]:
             num_processors = int(n_procs)
@@ -231,11 +231,13 @@ def end_to_end_analysis():
     max_num_processors = 250
     num_tasksystems_per_iteration = 10
     num_tasks_step_size = 100
+    num_processors_step_size = 20
     curve_save_path = './graphs/problem_size_avg_runtime_3.png'
 
     # generate the tasksystems dataset
     print('starting dataset generation')
-    generate_dataset(dataset_save_path,num_tasksystems_per_iteration,max_num_tasks,max_num_processors,steps_to_take=num_tasks_step_size)
+    generate_dataset(dataset_save_path, num_tasksystems_per_iteration, max_num_tasks, max_num_processors,
+                     steps_num_tasks=num_tasks_step_size,steps_num_processors=num_processors_step_size)
     # generate the lower bounds dataset
     #find_annealing_lower_bounds(dataset_save_path, annealing_lower_bound_save_path)
 
@@ -268,13 +270,11 @@ def lower_bound_analysis():
     print(lower_bounds)
 
 def single_tasksystem_solution_annealing_experiment(
-        num_tasks, num_processors, min_deadline, max_deadline, exp_scale):
+        taskSystem:TaskSystem):
     """
     Experiment of partitioning a single task system of a considerable size with a 5s time limit
     :return:
     """
-    tsg = TaskSystemGenerator(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
-    taskSystem:TaskSystem = tsg.canonical_generate_tasks()
 
     # build cqm problem from the tasksystem
     cqm = build_cqm(taskSystem)
@@ -286,15 +286,11 @@ def single_tasksystem_solution_annealing_experiment(
         pickle.dump(solutions,f)
 
 def single_tasksystem_solution_bbs_experiment(
-        num_tasks, num_processors, min_deadline, max_deadline,
-        exp_scale):
+        taskSystem:TaskSystem):
     """
     Branch and bound solution experiment of a single task system
     :return:
     """
-
-    tsg = TaskSystemGenerator(num_tasks, num_processors, min_deadline, max_deadline, exp_scale)
-    taskSystem: TaskSystem = tsg.canonical_generate_tasks()
 
     bbs = BranchBoundSolver(taskSystem)
 
@@ -305,11 +301,58 @@ def single_tasksystem_solution_bbs_experiment(
         print("Infeasible task system")
 
 
+def estimated_annealer_runtime_analysis():
+    """
+    Problem size vs estimated annealer runtime analysis
+    range: 0-1,000,000
+    :return:
+    """
+    dataset_save_path = './datasets/problem_size_vs_estimated_annealer_runtime/initial/1.pkl'
+    solution_dataset_save_path = './datasets/problem_size_vs_estimated_annealer_runtime/solution/1.pkl'
+    curve_save_path = './datasets/problem_size_vs_estimated_annealer_runtime/curve/1.png'
+
+    # parameters
+    min_num_tasks = 2
+    min_num_processors = 2
+    max_num_tasks = 10002
+    max_num_processors = 122
+    steps_num_tasks = 1000
+    steps_num_processors = 40
+    min_deadline = 100
+    max_deadline = 200
+
+    num_tasksystems_per_iteration = 1 # for testing purposes, increase later on
+    if False:
+
+        print('generating task systems')
+
+        generate_dataset(dataset_save_path,num_tasksystems_per_iteration,
+                         max_num_tasks,max_num_processors, min_deadline,max_deadline,
+                         steps_num_tasks=steps_num_tasks, steps_num_processors=steps_num_processors,
+                         min_num_tasks=min_num_tasks,min_num_processors=min_num_processors)
+
+        print('Finding estimated annealer runtimes')
+        # generate the lower bounds dataset
+        find_annealing_lower_bounds(dataset_save_path, solution_dataset_save_path)
+
+    print('reading runtimes')
+    # read the lower bounds and create xss, yss for curve generation
+    with open(solution_dataset_save_path,'rb') as f:
+        lower_bounds = pickle.load(f)
+
+    print('parsing runtimes to generate graph')
+    problem_sizes = []
+    worst_case_lower_bounds = []
+    for problem_size in lower_bounds:
+        problem_sizes.append(problem_size)
+        worst_case_lower_bounds.append(max(lower_bounds[problem_size]))
+
+    # generate lower bound curve
+    generateNCurves('Problem Size','Estimated Annealer Runtime (s)',
+                    curve_save_path,[problem_sizes], [worst_case_lower_bounds],1,plotter_func=lambda xs,ys,ax: ax.scatter(xs,ys))
 
 
-if __name__ == '__main__':
-    #end_to_end_analysis()
-    #lower_bound_analysis()
+def single_tasksystem_experiments():
     num_tasks = 7000
     num_processors = 90
     min_deadline = 100
@@ -321,6 +364,12 @@ if __name__ == '__main__':
     tsg = TaskSystemGenerator(num_tasks, num_processors, min_deadline, max_deadline, exp_scale)
     taskSystem: TaskSystem = tsg.canonical_generate_tasks()
 
-    #single_tasksystem_solution_bbs_experiment(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
-    single_tasksystem_solution_annealing_experiment(num_tasks,num_processors,min_deadline,max_deadline,exp_scale)
+    single_tasksystem_solution_bbs_experiment(taskSystem)
+    # single_tasksystem_solution_annealing_experiment(taskSystem)
     pass
+
+if __name__ == '__main__':
+    #end_to_end_analysis()
+    #lower_bound_analysis()
+    #single_tasksystem_experiments()
+    estimated_annealer_runtime_analysis()

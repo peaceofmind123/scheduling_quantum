@@ -71,7 +71,7 @@ def find_solution_to_dataset(dataset_path, results_save_path, Solver):
                 try:
                     partitioning, optimal_objective, runtime_ms = solver.solve(False)  # don't display output
                 except Exception as e:
-                    print(e)
+
                     # this happens only when the system does not have a feasible solution
                     partitioning = 'infeasible'
                     runtime_ms = 'infeasible'
@@ -322,18 +322,17 @@ def estimated_annealer_runtime_analysis():
     max_deadline = 200
 
     num_tasksystems_per_iteration = 1 # for testing purposes, increase later on
-    if False:
 
-        print('generating task systems')
+    print('generating task systems')
 
-        generate_dataset(dataset_save_path,num_tasksystems_per_iteration,
-                         max_num_tasks,max_num_processors, min_deadline,max_deadline,
-                         steps_num_tasks=steps_num_tasks, steps_num_processors=steps_num_processors,
-                         min_num_tasks=min_num_tasks,min_num_processors=min_num_processors)
+    generate_dataset(dataset_save_path,num_tasksystems_per_iteration,
+                     max_num_tasks,max_num_processors, min_deadline,max_deadline,
+                     steps_num_tasks=steps_num_tasks, steps_num_processors=steps_num_processors,
+                     min_num_tasks=min_num_tasks,min_num_processors=min_num_processors)
 
-        print('Finding estimated annealer runtimes')
-        # generate the lower bounds dataset
-        find_annealing_lower_bounds(dataset_save_path, solution_dataset_save_path)
+    print('Finding estimated annealer runtimes')
+    # generate the lower bounds dataset
+    find_annealing_lower_bounds(dataset_save_path, solution_dataset_save_path)
 
     print('reading runtimes')
     # read the lower bounds and create xss, yss for curve generation
@@ -368,8 +367,75 @@ def single_tasksystem_experiments():
     # single_tasksystem_solution_annealing_experiment(taskSystem)
     pass
 
+def estimated_annealer_runtime_vs_bbs_runtime_analysis():
+    """
+        Problem size vs estimated annealer runtime (worst case) and
+        Problem size vs actual bbs runtime (worst case)
+        range: 0-1,000,000
+        :return:
+        """
+    # this dataset needs to be separate because bbs cannot handle 1.2m sized problems
+
+    dataset_for_bbs_save_path = './datasets/problem_size_annealer_bbs_runtimes/initial/1_bbs.pkl'
+    dataset_save_path = './datasets/problem_size_annealer_bbs_runtimes/initial/1.pkl'
+    bbs_solution_save_path = './datasets/problem_size_annealer_bbs_runtimes/solution/bbs/1.pkl'
+    annealer_runtimes_save_path = './datasets/problem_size_annealer_bbs_runtimes/solution/annealer/1.pkl'
+    curve_save_path = './datasets/problem_size_annealer_bbs_runtimes/curve/1.png'
+
+    # parameters
+    min_num_tasks = 2
+    min_num_processors = 2
+    max_num_tasks = 5002 # this is 10002 for annealer, implicit in the dataset
+    max_num_processors = 122
+    steps_num_tasks = 1000
+    steps_num_processors = 40
+    min_deadline = 100
+    max_deadline = 200
+
+    num_tasksystems_per_iteration = 1  # for testing purposes, increase later on
+
+    # generate dataset for bbs
+    print('generating task systems for bbs')
+
+    generate_dataset(dataset_for_bbs_save_path, num_tasksystems_per_iteration,
+                     max_num_tasks, max_num_processors, min_deadline, max_deadline,
+                     steps_num_tasks=steps_num_tasks, steps_num_processors=steps_num_processors,
+                     min_num_tasks=min_num_tasks, min_num_processors=min_num_processors)
+
+    # compute solutions
+    print("Computing branch and bound solutions")
+    find_branch_bound_solutions_to_dataset(dataset_for_bbs_save_path,bbs_solution_save_path)
+
+    print('parsing solutions')
+    # get branch and bound solution runtimes
+    problem_size_runtime_bbs = get_problem_size_and_runtime_from_solution_dataset(bbs_solution_save_path)
+    # get annealer estimated runtimes
+    with open(annealer_runtimes_save_path, 'rb') as f:
+        lower_bounds = pickle.load(f)
+
+    print('generating graph')
+
+    problem_sizes_annealer = []
+    problem_sizes_bbs = []
+    annealer_runtimes = []
+    bbs_runtimes = []
+
+    for problem_size in lower_bounds:
+        problem_sizes_annealer.append(problem_size)
+        annealer_runtimes.append(max(lower_bounds[problem_size]))
+
+    for problem_size in problem_size_runtime_bbs:
+        problem_sizes_bbs.append(problem_size)
+        bbs_runtimes.append(max(problem_size_runtime_bbs[problem_size]) / 1000) # cuz it's in milliseconds
+
+    generateNCurves('Problem Size', 'Runtimes (s)',
+                    curve_save_path, [problem_sizes_annealer,problem_sizes_bbs], [annealer_runtimes,bbs_runtimes], 1,
+                    plotter_func=lambda xs, ys, ax: ax.scatter(xs, ys), legends=['Quantum Annealing', 'Branch and Bound'])
+
+
 if __name__ == '__main__':
     #end_to_end_analysis()
     #lower_bound_analysis()
     #single_tasksystem_experiments()
-    estimated_annealer_runtime_analysis()
+    #estimated_annealer_runtime_analysis()
+    estimated_annealer_runtime_vs_bbs_runtime_analysis()

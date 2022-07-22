@@ -68,8 +68,9 @@ class BranchBoundSolver:
             # return the values
             return self.get_partitioning_from_solution(), self.solver.Objective().Value(), self.solver.wall_time()
         else:
-            print('The problem does not have a feasible solution.')
-            print(f'Infeasibility determined in:{self.solver.wall_time()} milliseconds')
+            if display_output:
+                print('The problem does not have a feasible solution.')
+                print(f'Infeasibility determined in:{self.solver.wall_time()} milliseconds')
 
     def get_partitioning_from_solution(self):
         """To be called after solve is called"""
